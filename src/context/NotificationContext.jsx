@@ -46,7 +46,8 @@ export function NotificationProvider({ children }) {
         eventSourceRef.current.close();
       }
 
-      const url = `/api/notifications/stream?token=${encodeURIComponent(token)}`;
+      const baseURL = import.meta.env.VITE_API_URL || '/api';
+      const url = `${baseURL}/notifications/stream?token=${encodeURIComponent(token)}`;
       const es = new EventSource(url);
       eventSourceRef.current = es;
 
