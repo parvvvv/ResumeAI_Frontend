@@ -1,0 +1,65 @@
+import { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { HiOutlineSparkles } from 'react-icons/hi';
+import api from '../api/client';
+import { useToast } from '../context/ToastContext';
+
+export default function Tailor() {
+  const { resumeId } = useParams();
+  const navigate = useNavigate();
+  const { addToast } = useToast();
+  const [jobDescription, setJobDescription] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleTailor = () => {
+    if (jobDescription.trim().length < 10) {
+      setError('Please enter a job description (at least 10 characters).');
+      return;
+    }
+    setError('');
+    setSubmitting(true);
+
+    // Show toast and navigate immediately — don't wait for the API
+    addToast('Tailoring in progress — we\'ll notify you when it\'s ready!', 'info', 5000);
+    navigate('/dashboard');
+
+    // Fire-and-forget: send the API request in the background
+    api.post('/resume/tailor', {
+      baseResumeId: resumeId,
+      jobDescription: jobDescription.trim(),
+    }).catch((err) => {
+      console.error('Tailor API error:', err);
+      // If the API call fails, the SSE tailor_failed event will also notify
+    });
+  };
+
+  return (
+    <div className="page fade-in" style={{ maxWidth: '900px' }}>
+      <h1 className="display-sm mb-2">Tailor Resume</h1>
+      <p className="body-lg mb-6">Paste a job description and our AI will optimize your resume for it.</p>
+
+      {error && <div className="alert alert-error mb-4">{error}</div>}
+
+      <div className="input-group mb-6">
+        <label>Job Description</label>
+        <textarea
+          className="input"
+          rows={10}
+          placeholder="Paste the full job description here..."
+          value={jobDescription}
+          onChange={(e) => setJobDescription(e.target.value)}
+          style={{ minHeight: '200px' }}
+        />
+      </div>
+
+      <button className="btn btn-primary btn-lg" onClick={handleTailor} disabled={submitting} style={{ width: '100%' }}>
+        {submitting ? (
+          <><span className="spinner" /> Submitting...</>
+        ) : (
+          <><HiOutlineSparkles /> Tailor My Resume</>
+        )}
+      </button>
+    </div>
+  );
+}
