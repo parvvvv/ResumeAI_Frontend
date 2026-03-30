@@ -59,7 +59,7 @@ export function NotificationProvider({ children }) {
             'success',
             10000,
             {
-              label: '⬇ Download',
+              label: 'Download',
               onClick: () => {
                 const link = document.createElement('a');
                 link.href = payload.data?.pdfUrl;

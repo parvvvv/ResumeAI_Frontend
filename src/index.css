@@ -780,10 +780,13 @@ textarea.input {
 }
 
 .toast-icon {
-  font-size: 1rem;
+  font-size: 1.25rem;
   flex-shrink: 0;
-  width: 22px;
-  text-align: center;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .toast-success .toast-icon { color: var(--success); }

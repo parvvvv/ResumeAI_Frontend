@@ -1,4 +1,8 @@
 import { createContext, useContext, useState, useCallback } from 'react';
+import { 
+  HiCheckCircle, HiExclamation, HiInformationCircle, 
+  HiXCircle, HiX 
+} from 'react-icons/hi';
 
 const ToastContext = createContext(null);
 
@@ -46,10 +50,10 @@ function ToastContainer({ toasts, onDismiss }) {
       {toasts.map((toast) => (
         <div key={toast.id} className={`toast toast-${toast.type} toast-enter`}>
           <div className="toast-icon">
-            {toast.type === 'success' && '✓'}
-            {toast.type === 'error' && '✕'}
-            {toast.type === 'info' && 'ℹ'}
-            {toast.type === 'warning' && '⚠'}
+            {toast.type === 'success' && <HiCheckCircle />}
+            {toast.type === 'error' && <HiXCircle />}
+            {toast.type === 'info' && <HiInformationCircle />}
+            {toast.type === 'warning' && <HiExclamation />}
           </div>
           <span className="toast-message">{toast.message}</span>
           {toast.action && (
@@ -64,7 +68,9 @@ function ToastContainer({ toasts, onDismiss }) {
               {toast.action.label}
             </button>
           )}
-          <button className="toast-close" onClick={() => onDismiss(toast.id)}>×</button>
+          <button className="toast-close" onClick={() => onDismiss(toast.id)}>
+            <HiX />
+          </button>
         </div>
       ))}
     </div>
