@@ -76,16 +76,18 @@ export default function Editor() {
 
   return (
     <div className="page fade-in" style={{ maxWidth: '900px' }}>
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-6 stack-mobile">
         <h1 className="display-sm">Edit Resume</h1>
-        <div className="flex gap-3 items-center">
+        <div className="flex gap-3 items-center stack-mobile">
           {message && <span className={message.includes('Failed') ? 'text-error' : 'text-success'} style={{ fontSize: '0.85rem' }}>{message}</span>}
-          <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-            {saving ? <span className="spinner" /> : <><HiOutlineSave /> Save</>}
-          </button>
-          <button className="btn btn-secondary" onClick={() => navigate(`/tailor/${resumeId}`)}>
-            <HiOutlineSparkles /> Tailor for Job
-          </button>
+          <div className="flex gap-2">
+            <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+              {saving ? <span className="spinner" /> : <><HiOutlineSave /> Save</>}
+            </button>
+            <button className="btn btn-secondary" onClick={() => navigate(`/tailor/${resumeId}`)}>
+              <HiOutlineSparkles /> Tailor
+            </button>
+          </div>
         </div>
       </div>
 

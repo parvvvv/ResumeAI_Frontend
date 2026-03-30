@@ -319,7 +319,7 @@ export default function Dashboard() {
   return (
     <div className="page fade-in">
       {/* Hero */}
-      <div className="flex justify-between items-center mb-8">
+      <div className="flex justify-between items-center mb-8 hero-flex">
         <div>
           <h1 className="display-md">Welcome back</h1>
           <p className="body-lg mt-2">Manage your resumes and create new ones</p>
@@ -331,7 +331,7 @@ export default function Dashboard() {
 
       {/* Quick Stats */}
       {hasContent && (
-        <div className="mb-8" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-4)' }}>
+        <div className="mb-8 hide-on-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-4)' }}>
           <div className="glass ambient-glow" style={{ padding: 'var(--space-6)' }}>
             <div className="label-md">Base Resumes</div>
             <div className="display-sm mt-2" style={{ color: 'var(--primary)' }}>{baseResumes.length}</div>

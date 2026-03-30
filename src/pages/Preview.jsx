@@ -41,7 +41,7 @@ export default function Preview() {
       {/* Template Selection */}
       <div className="mb-6">
         <div className="label-md mb-4">Select Template</div>
-        <div className="flex gap-4">
+        <div className="flex gap-4 stack-mobile">
           <TemplateCard
             name="modern"
             label="Modern"
@@ -59,7 +59,7 @@ export default function Preview() {
         </div>
       </div>
 
-      <button className="btn btn-primary btn-lg" onClick={handleGenerate} disabled={submitting}>
+      <button className="btn btn-primary btn-lg btn-lg-mobile" onClick={handleGenerate} disabled={submitting}>
         {submitting ? (
           <><span className="spinner" /> Submitting...</>
         ) : (

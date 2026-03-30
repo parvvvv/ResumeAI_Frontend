@@ -53,7 +53,7 @@ export default function Tailor() {
         />
       </div>
 
-      <button className="btn btn-primary btn-lg" onClick={handleTailor} disabled={submitting} style={{ width: '100%' }}>
+      <button className="btn btn-primary btn-lg btn-lg-mobile" onClick={handleTailor} disabled={submitting} style={{ width: '100%' }}>
         {submitting ? (
           <><span className="spinner" /> Submitting...</>
         ) : (

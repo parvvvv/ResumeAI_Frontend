@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Logo from '../components/Logo';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -24,8 +25,9 @@ export default function Login() {
     <div className="auth-page">
       <div className="auth-card glass">
         <div className="auth-logo">
-          <h1>ResumeAI</h1>
-          <p>AI-powered resume tailoring</p>
+          <Logo size={64} className="mb-4" />
+          <h1>ElevateCV</h1>
+          <p>AI-powered career acceleration</p>
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
