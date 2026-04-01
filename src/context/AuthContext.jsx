@@ -16,8 +16,9 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       const res = await api.post('/auth/signup', { email, password });
-      const { access_token, user: userData } = res.data;
+      const { access_token, refresh_token, user: userData } = res.data;
       localStorage.setItem('token', access_token);
+      localStorage.setItem('refresh_token', refresh_token);
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
       return { success: true };
@@ -32,8 +33,9 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       const res = await api.post('/auth/login', { email, password });
-      const { access_token, user: userData } = res.data;
+      const { access_token, refresh_token, user: userData } = res.data;
       localStorage.setItem('token', access_token);
+      localStorage.setItem('refresh_token', refresh_token);
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
       return { success: true };
@@ -46,9 +48,21 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
     setUser(null);
   };
+
+  // Sync state if it was logged out via interceptor
+  useEffect(() => {
+    const checkToken = () => {
+      if (!localStorage.getItem('token') && user) {
+        setUser(null);
+      }
+    };
+    window.addEventListener('storage', checkToken);
+    return () => window.removeEventListener('storage', checkToken);
+  }, [user]);
 
   return (
     <AuthContext.Provider value={{ user, isAuthenticated, loading, signup, login, logout }}>

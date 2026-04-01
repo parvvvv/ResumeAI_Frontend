@@ -212,6 +212,8 @@ export default function Dashboard() {
   const [deleting, setDeleting] = useState(null);
   const [selectedBaseId, setSelectedBaseId] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', onConfirm: null });
+  const [baseLimit, setBaseLimit] = useState(4);
+  const [generatedLimit, setGeneratedLimit] = useState(4);
   const navigate = useNavigate();
   const { user } = useAuth();
   const { addToast } = useToast();
@@ -241,12 +243,10 @@ export default function Dashboard() {
   // ── Subscribe to SSE events for auto-refresh ──
   useEffect(() => {
     const handleTailorComplete = () => {
-      // Re-fetch generated resumes when tailoring completes
       fetchData();
     };
 
     const handlePdfReady = () => {
-      // Re-fetch to get updated pdfUrl
       fetchData();
     };
 
@@ -259,21 +259,21 @@ export default function Dashboard() {
     };
   }, [onEvent, offEvent, fetchData]);
 
-  // ── Delete handlers ──
+  // ── Delete Handlers ──
   const closeModal = () => setConfirmModal({ open: false, title: '', message: '', onConfirm: null });
 
   const handleDeleteBase = (id) => {
     setConfirmModal({
       open: true,
-      title: 'Delete Base Resume',
-      message: 'This will permanently delete this base resume and all its tailored versions. This action cannot be undone.',
+      title: 'Delete Original Resume',
+      message: 'Are you sure? This will delete the original resume. Any tailored versions will remain, but their connection to this original will be lost. This action cannot be undone.',
       onConfirm: async () => {
         setDeleting(id);
         try {
           await api.delete(`/resume/${id}`);
-          setBaseResumes((prev) => prev.filter((r) => r.id !== id));
-          setGenerated((prev) => prev.filter((r) => r.baseResumeId !== id));
-          addToast('Resume deleted successfully.', 'success');
+          setBaseResumes(r => r.filter(x => x.id !== id));
+          if (selectedBaseId === id) setSelectedBaseId(null);
+          addToast('Original resume deleted.', 'success');
         } catch (err) {
           console.error('Failed to delete resume:', err);
           addToast('Failed to delete resume.', 'error');
@@ -289,12 +289,12 @@ export default function Dashboard() {
     setConfirmModal({
       open: true,
       title: 'Delete Tailored Resume',
-      message: 'This will permanently delete this tailored resume. This action cannot be undone.',
+      message: 'Are you sure you want to delete this tailored resume? This action cannot be undone.',
       onConfirm: async () => {
         setDeleting(id);
         try {
-          await api.delete(`/dashboard/${id}`);
-          setGenerated((prev) => prev.filter((r) => r.id !== id));
+          await api.delete(`/resume/generated/${id}`);
+          setGenerated(r => r.filter(x => x.id !== id));
           addToast('Tailored resume deleted.', 'success');
         } catch (err) {
           console.error('Failed to delete resume:', err);
@@ -320,10 +320,17 @@ export default function Dashboard() {
     : null;
 
   // ── Apply filters ──
+  const filteredBase = baseResumes.filter((r) => {
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const name = r.resumeData?.personalInfo?.fullName || '';
+      return name.toLowerCase().includes(query);
+    }
+    return true;
+  });
+
   const filteredGenerated = generated.filter((r) => {
-    // 1. Filter by selectedBaseId
     if (selectedBaseId && r.baseResumeId !== selectedBaseId) return false;
-    // 2. Filter by searchQuery
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const baseCandidate = baseResumes.find(b => b.id === r.baseResumeId)?.resumeData?.personalInfo?.fullName || '';
@@ -335,42 +342,57 @@ export default function Dashboard() {
     return true;
   });
 
+  const visibleBase = filteredBase.slice(0, baseLimit);
+  const visibleGenerated = filteredGenerated.slice(0, generatedLimit);
+
   return (
     <div className="page fade-in">
       {/* Hero */}
-      <div className="flex justify-between items-center mb-8 hero-flex">
-        <div>
-          <h1 className="display-md">Welcome back</h1>
-          <p className="body-lg mt-2">Manage your resumes and create new ones</p>
-        </div>
+      <div className="glass ambient-glow mb-8 flex flex-col items-center justify-center text-center" style={{ padding: '2rem 1.5rem', borderRadius: '1.25rem' }}>
+        <h1 className="display-sm mb-3">Welcome back, {user?.email?.split('@')[0]} 👋</h1>
+        <p className="body-lg text-muted mb-6" style={{ maxWidth: '600px' }}>
+          {hasContent 
+            ? "Manage your resumes and generate AI-tailored variations optimized for applicant tracking systems." 
+            : "Your AI tailoring workspace is ready. Upload a resume to get started."}
+        </p>
         <button className="btn btn-primary btn-lg" onClick={() => navigate('/upload')}>
-          <HiOutlineUpload /> Upload Resume
+          <HiOutlineUpload size={20} /> Upload New Resume
         </button>
       </div>
 
       {/* Quick Stats */}
       {hasContent && (
-        <div className="mb-8 hide-on-mobile" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-4)' }}>
-          <div className="glass ambient-glow" style={{ padding: 'var(--space-6)' }}>
-            <div className="label-md">Base Resumes</div>
-            <div className="display-sm mt-2" style={{ color: 'var(--primary)' }}>{baseResumes.length}</div>
+        <div className="mb-10" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
+          
+          <div className="glass ambient-glow flex flex-col justify-between items-center text-center" style={{ padding: '1.5rem', borderRadius: '1rem' }}>
+            <div className="label-md text-muted mb-4">Original Resumes</div>
+            <div className="display-sm" style={{ color: 'var(--primary)' }}>{baseResumes.length}</div>
           </div>
-          <div className="glass ambient-glow" style={{ padding: 'var(--space-6)' }}>
-            <div className="label-md">Tailored Versions</div>
-            <div className="display-sm mt-2" style={{ color: 'var(--tertiary)' }}>{generated.length}</div>
+          
+          <div className="glass ambient-glow flex flex-col justify-between items-center text-center" style={{ padding: '1.5rem', borderRadius: '1rem' }}>
+            <div className="label-md text-muted mb-4">Tailored Versions</div>
+            <div className="display-sm" style={{ color: 'var(--tertiary)' }}>{generated.length}</div>
           </div>
-          <div className="glass ambient-glow" style={{ padding: 'var(--space-6)' }}>
-            <div className="label-md">Avg. ATS Score</div>
-            <div className="display-sm mt-2" style={{
-              color: avgAts ? (avgAts >= 75 ? 'var(--success)' : avgAts >= 50 ? 'var(--warning)' : 'var(--error)') : 'var(--outline)',
-            }}>{avgAts ? `${avgAts}%` : 'N/A'}</div>
+          
+          <div className="glass ambient-glow flex flex-col items-center text-center" style={{ padding: '1.5rem', borderRadius: '1rem' }}>
+            <div className="label-md text-muted mb-4">Avg. ATS Score</div>
+            <div className="flex items-center gap-3">
+              <div className="display-sm" style={{
+                color: avgAts ? (avgAts >= 75 ? 'var(--success)' : avgAts >= 50 ? 'var(--warning)' : 'var(--error)') : 'var(--outline)'
+              }}>
+                {avgAts ? `${avgAts}%` : 'N/A'}
+              </div>
+              {avgAts && <ScoreRing score={avgAts} size={32} strokeWidth={3} showValue={false} />}
+            </div>
           </div>
-          <div className="glass ambient-glow" style={{ padding: 'var(--space-6)' }}>
-            <div className="label-md">PDFs Generated</div>
-            <div className="display-sm mt-2" style={{ color: 'var(--success)' }}>
+          
+          <div className="glass ambient-glow flex flex-col justify-between items-center text-center" style={{ padding: '1.5rem', borderRadius: '1rem' }}>
+            <div className="label-md text-muted mb-4">PDFs Generated</div>
+            <div className="display-sm" style={{ color: 'var(--success)' }}>
               {generated.filter(r => r.pdfUrl).length}
             </div>
           </div>
+          
         </div>
       )}
 
@@ -392,9 +414,9 @@ export default function Dashboard() {
             <h2 className="title-md mb-4 flex items-center gap-2">
               <span className="text-primary">●</span> Originals
             </h2>
-            {baseResumes.length > 0 ? (
+            {filteredBase.length > 0 ? (
               <div className="flex flex-col gap-3">
-                {baseResumes.map((r) => (
+                {visibleBase.map((r) => (
                   <div 
                     key={r.id} 
                     className={`compact-base-card slide-up ${selectedBaseId === r.id ? 'active' : ''}`}
@@ -421,10 +443,21 @@ export default function Dashboard() {
                     </div>
                   </div>
                 ))}
+                
+                {baseLimit < filteredBase.length && (
+                  <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'center' }}>
+                    <button 
+                      className="btn-show-more" 
+                      onClick={() => setBaseLimit(prev => prev + 4)}
+                    >
+                      Show More <HiOutlineChevronDown />
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
                 <div className="text-muted text-sm" style={{ padding: 'var(--space-4)', background: 'var(--surface-container-low)', borderRadius: 'var(--radius-md)' }}>
-                  No original resumes.
+                  {baseResumes.length === 0 ? 'No original resumes.' : 'No matches found.'}
                 </div>
             )}
           </div>
@@ -445,46 +478,59 @@ export default function Dashboard() {
               )}
             </div>
             {filteredGenerated.length > 0 ? (
-              <div className="grid-cards">
-                {filteredGenerated.map((r) => (
-                  <div key={r.id} className={`glass slide-up ${!r.pdfUrl ? 'pulse-glow' : 'ambient-glow'}`} style={{ padding: '24px' }}>
-                    {/* Card Header */}
-                    <div className="flex justify-between items-start">
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="title-md" style={{ marginBottom: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {r.summary || 'Tailored Resume'}
+              <>
+                <div className="grid-cards" style={{ gap: '1.5rem' }}>
+                  {visibleGenerated.map((r) => (
+                    <div key={r.id} className={`glass slide-up ${!r.pdfUrl ? 'pulse-glow' : 'ambient-glow'}`} style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
+                      {/* Card Header */}
+                      <div className="flex justify-between items-start">
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div className="title-md" style={{ marginBottom: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {r.summary || 'Tailored Resume'}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>
+                            <span style={{ color: 'var(--primary)', opacity: 0.7 }}>↳</span>
+                            <span>{baseResumes.find(b => b.id === r.baseResumeId)?.resumeData?.personalInfo?.fullName || 'Base Resume'}</span>
+                            <span style={{ opacity: 0.35 }}>·</span>
+                            <span style={{ opacity: 0.5 }}>{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ''}</span>
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>
-                          <span style={{ color: 'var(--primary)', opacity: 0.7 }}>↳</span>
-                          <span>{baseResumes.find(b => b.id === r.baseResumeId)?.resumeData?.personalInfo?.fullName || 'Base Resume'}</span>
-                          <span style={{ opacity: 0.35 }}>·</span>
-                          <span style={{ opacity: 0.5 }}>{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ''}</span>
-                        </div>
+                        <OverflowMenu items={[
+                          { icon: <HiOutlineEye />, label: 'Preview', onClick: () => navigate(`/preview/${r.id}?type=generated`) },
+                          ...(r.pdfUrl ? [{ icon: <HiOutlineDownload />, label: 'Download', onClick: () => window.open(r.pdfUrl, '_blank') }] : []),
+                          { icon: <HiOutlineTrash />, label: deleting === r.id ? 'Deleting…' : 'Delete', onClick: () => handleDeleteGenerated(r.id), danger: true, disabled: deleting === r.id },
+                        ]} />
                       </div>
-                      <OverflowMenu items={[
-                        { icon: <HiOutlineEye />, label: 'Preview', onClick: () => navigate(`/preview/${r.id}?type=generated`) },
-                        ...(r.pdfUrl ? [{ icon: <HiOutlineDownload />, label: 'Download', onClick: () => window.open(r.pdfUrl, '_blank') }] : []),
-                        { icon: <HiOutlineTrash />, label: deleting === r.id ? 'Deleting…' : 'Delete', onClick: () => handleDeleteGenerated(r.id), danger: true, disabled: deleting === r.id },
-                      ]} />
-                    </div>
 
-                    {/* Analytics */}
-                    <AnalyticsStrip analytics={r.analytics} />
+                      {/* Analytics */}
+                      <AnalyticsStrip analytics={r.analytics} />
 
-                    {/* Actions */}
-                    <div className="flex gap-2 justify-end" style={{ marginTop: '12px' }}>
-                      <button className="btn btn-sm btn-secondary" onClick={() => navigate(`/preview/${r.id}?type=generated`)}>
-                        <HiOutlineEye /> Preview
-                      </button>
-                      {r.pdfUrl && (
-                        <a href={r.pdfUrl} download className="btn btn-sm btn-primary">
-                          <HiOutlineDownload /> Download
-                        </a>
-                      )}
+                      {/* Actions */}
+                      <div className="flex gap-2 justify-end" style={{ marginTop: '12px' }}>
+                        <button className="btn btn-sm btn-secondary" onClick={() => navigate(`/preview/${r.id}?type=generated`)}>
+                          <HiOutlineEye /> Preview
+                        </button>
+                        {r.pdfUrl && (
+                          <a href={r.pdfUrl} download className="btn btn-sm btn-primary">
+                            <HiOutlineDownload /> Download
+                          </a>
+                        )}
+                      </div>
                     </div>
+                  ))}
+                </div>
+                
+                {generatedLimit < filteredGenerated.length && (
+                  <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'center' }}>
+                    <button 
+                      className="btn-show-more" 
+                      onClick={() => setGeneratedLimit(prev => prev + 4)}
+                    >
+                      Show More <HiOutlineChevronDown />
+                    </button>
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             ) : (
                 <div className="text-muted" style={{ padding: 'var(--space-8)', background: 'var(--surface-container-low)', borderRadius: 'var(--radius-lg)', textAlign: 'center' }}>
                   {generated.length === 0 ? 'No tailored resumes yet. Click "Tailor" on an original resume to create one.' : 'No tailored resumes match your filters.'}

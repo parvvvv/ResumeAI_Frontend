@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { SearchProvider } from './context/SearchContext';
+import { JobsProvider } from './context/JobsContext';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -11,6 +12,7 @@ import Upload from './pages/Upload';
 import Editor from './pages/Editor';
 import Tailor from './pages/Tailor';
 import Preview from './pages/Preview';
+import Jobs from './pages/Jobs';
 import './index.css';
 
 function ProtectedRoute({ children }) {
@@ -35,6 +37,7 @@ function AppRoutes() {
         <Route path="/editor/:resumeId" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
         <Route path="/tailor/:resumeId" element={<ProtectedRoute><Tailor /></ProtectedRoute>} />
         <Route path="/preview/:resumeId" element={<ProtectedRoute><Preview /></ProtectedRoute>} />
+        <Route path="/jobs" element={<ProtectedRoute><Jobs /></ProtectedRoute>} />
 
         {/* Default */}
         <Route path="*" element={<Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />} />
@@ -50,7 +53,9 @@ export default function App() {
         <ToastProvider>
           <NotificationProvider>
             <SearchProvider>
-              <AppRoutes />
+              <JobsProvider>
+                <AppRoutes />
+              </JobsProvider>
             </SearchProvider>
           </NotificationProvider>
         </ToastProvider>
