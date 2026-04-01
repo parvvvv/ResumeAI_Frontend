@@ -346,7 +346,7 @@ export default function Dashboard() {
   const visibleGenerated = filteredGenerated.slice(0, generatedLimit);
 
   return (
-    <div className="page fade-in">
+    <div className="page fade-in" style={{ paddingBottom: '140px' }}>
       {/* Hero */}
       <div className="glass ambient-glow mb-8 flex flex-col items-center justify-center text-center" style={{ padding: '2rem 1.5rem', borderRadius: '1.25rem' }}>
         <h1 className="display-sm mb-3">Welcome back, {user?.email?.split('@')[0]} 👋</h1>
@@ -362,7 +362,7 @@ export default function Dashboard() {
 
       {/* Quick Stats */}
       {hasContent && (
-        <div className="mb-10" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
+        <div className="stats-carousel">
           
           <div className="glass ambient-glow flex flex-col justify-between items-center text-center" style={{ padding: '1.5rem', borderRadius: '1rem' }}>
             <div className="label-md text-muted mb-4">Original Resumes</div>
@@ -445,12 +445,12 @@ export default function Dashboard() {
                 ))}
                 
                 {baseLimit < filteredBase.length && (
-                  <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'center' }}>
+                  <div className="show-more-wrapper">
                     <button 
                       className="btn-show-more" 
                       onClick={() => setBaseLimit(prev => prev + 4)}
                     >
-                      Show More <HiOutlineChevronDown />
+                      <span>Show More</span> <HiOutlineChevronDown size={22} className="show-more-icon" />
                     </button>
                   </div>
                 )}
@@ -521,12 +521,12 @@ export default function Dashboard() {
                 </div>
                 
                 {generatedLimit < filteredGenerated.length && (
-                  <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'center' }}>
+                  <div className="show-more-wrapper">
                     <button 
                       className="btn-show-more" 
                       onClick={() => setGeneratedLimit(prev => prev + 4)}
                     >
-                      Show More <HiOutlineChevronDown />
+                      <span>Show More</span> <HiOutlineChevronDown size={22} className="show-more-icon" />
                     </button>
                   </div>
                 )}

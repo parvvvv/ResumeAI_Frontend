@@ -70,8 +70,8 @@ function JobCard({ job, layout }) {
             {logoFallback}
           </div>
         </div>
-        <div className="jobs-list-info-col">
-          <div className="job-card-title">{job.title}</div>
+        <div className="jobs-list-info-col" style={{ minWidth: 0, flex: 1 }}>
+          <div className="job-card-title" title={job.title}>{job.title}</div>
           <div className="job-card-company">{job.company}</div>
           <div className="job-card-meta mt-1">
             {job.location && (
@@ -111,8 +111,8 @@ function JobCard({ job, layout }) {
   // Grid layout (default)
   return (
     <div className="job-card slide-up">
-      <div className="job-card-header flex justify-between">
-        <div className="flex gap-3">
+      <div className="job-card-header flex justify-between" style={{ minWidth: 0 }}>
+        <div className="flex gap-3" style={{ minWidth: 0, flex: 1 }}>
           {job.company_logo ? (
             <img
               src={job.company_logo}
@@ -124,7 +124,7 @@ function JobCard({ job, layout }) {
           <div className="job-card-logo-fallback" style={{ display: job.company_logo ? 'none' : 'flex' }}>
             {logoFallback}
           </div>
-          <div className="job-card-info">
+          <div className="job-card-info" style={{ minWidth: 0, flex: 1 }}>
             <div className="job-card-title" title={job.title}>{job.title}</div>
             <div className="job-card-company">{job.company}</div>
           </div>
@@ -151,12 +151,13 @@ function JobCard({ job, layout }) {
         {job.is_remote && <span className="job-type-chip job-chip-remote">Remote</span>}
       </div>
 
-      <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(70, 72, 79, 0.1)', marginTop: 'auto' }}>
+      <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', marginTop: 'auto', paddingTop: '16px', display: 'flex', width: '100%' }}>
         <a
           href={job.apply_link}
           target="_blank"
           rel="noopener noreferrer"
-          className="btn btn-sm job-apply-btn w-full justify-center"
+          className="btn btn-sm job-apply-btn"
+          style={{ width: '100%', justifyContent: 'center' }}
         >
           Apply Now <HiOutlineExternalLink />
         </a>
@@ -184,7 +185,7 @@ export default function Jobs() {
   };
 
   return (
-    <div className="page jobs-page fade-in pb-24">
+    <div className="page jobs-page fade-in" style={{ paddingBottom: '140px' }}>
       {/* Header section */}
       <div className="jobs-header glass ambient-glow">
         <button className="btn btn-icon btn-secondary mb-4" onClick={() => navigate('/dashboard')}>
