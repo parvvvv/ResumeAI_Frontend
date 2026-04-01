@@ -12,6 +12,7 @@ import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useNotificationEvents } from '../context/NotificationContext';
+import { useSearch } from '../context/SearchContext';
 
 /* ─── Score Ring Component ─── */
 function ScoreRing({ score, size = 28, strokeWidth = 2.5, showValue = true }) {
@@ -209,11 +210,13 @@ export default function Dashboard() {
   const [generated, setGenerated] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
+  const [selectedBaseId, setSelectedBaseId] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', onConfirm: null });
   const navigate = useNavigate();
   const { user } = useAuth();
   const { addToast } = useToast();
   const { onEvent, offEvent } = useNotificationEvents();
+  const { searchQuery, setSearchQuery } = useSearch();
 
   // ── Fetch data ──
   const fetchData = useCallback(async () => {
@@ -316,6 +319,22 @@ export default function Dashboard() {
     ? Math.round(validScores.reduce((sum, r) => sum + r.analytics.atsScore, 0) / validScores.length)
     : null;
 
+  // ── Apply filters ──
+  const filteredGenerated = generated.filter((r) => {
+    // 1. Filter by selectedBaseId
+    if (selectedBaseId && r.baseResumeId !== selectedBaseId) return false;
+    // 2. Filter by searchQuery
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const baseCandidate = baseResumes.find(b => b.id === r.baseResumeId)?.resumeData?.personalInfo?.fullName || '';
+      return (
+        (r.summary && r.summary.toLowerCase().includes(query)) ||
+        (baseCandidate && baseCandidate.toLowerCase().includes(query))
+      );
+    }
+    return true;
+  });
+
   return (
     <div className="page fade-in">
       {/* Hero */}
@@ -376,7 +395,12 @@ export default function Dashboard() {
             {baseResumes.length > 0 ? (
               <div className="flex flex-col gap-3">
                 {baseResumes.map((r) => (
-                  <div key={r.id} className="compact-base-card slide-up">
+                  <div 
+                    key={r.id} 
+                    className={`compact-base-card slide-up ${selectedBaseId === r.id ? 'active' : ''}`}
+                    onClick={() => setSelectedBaseId(selectedBaseId === r.id ? null : r.id)}
+                    style={{ cursor: 'pointer', transition: 'all 0.2s', border: selectedBaseId === r.id ? '1px solid var(--primary)' : '1px solid transparent', backgroundColor: selectedBaseId === r.id ? 'var(--surface-container-high)' : undefined }}
+                  >
                     <div className="flex justify-between items-start mb-2">
                       <div style={{ maxWidth: '80%' }}>
                         <div className="label-md truncate">{r.resumeData?.personalInfo?.fullName || 'Untitled Resume'}</div>
@@ -387,7 +411,7 @@ export default function Dashboard() {
                         { icon: <HiOutlineTrash />, label: deleting === r.id ? 'Deleting...' : 'Delete', onClick: () => handleDeleteBase(r.id), danger: true, disabled: deleting === r.id },
                       ]} />
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                       <button className="btn btn-sm btn-secondary" style={{ flex: 1, padding: '4px' }} onClick={() => navigate(`/editor/${r.id}`)}>
                         <HiOutlinePencilAlt /> Edit
                       </button>
@@ -407,12 +431,22 @@ export default function Dashboard() {
 
           {/* Generated Resumes */}
           <div className="tailored-resumes-main">
-            <h2 className="display-sm mb-4">
-              <span style={{ color: 'var(--tertiary)' }}>●</span> Tailored Resumes
-            </h2>
-            {generated.length > 0 ? (
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="display-sm">
+                <span style={{ color: 'var(--tertiary)' }}>●</span> Tailored Resumes
+              </h2>
+              {(selectedBaseId || searchQuery) && (
+                <button 
+                  className="btn btn-sm btn-secondary" 
+                  onClick={() => { setSelectedBaseId(null); setSearchQuery(''); }}
+                >
+                  Clear Filters
+                </button>
+              )}
+            </div>
+            {filteredGenerated.length > 0 ? (
               <div className="grid-cards">
-                {generated.map((r) => (
+                {filteredGenerated.map((r) => (
                   <div key={r.id} className={`glass slide-up ${!r.pdfUrl ? 'pulse-glow' : 'ambient-glow'}`} style={{ padding: '24px' }}>
                     {/* Card Header */}
                     <div className="flex justify-between items-start">
@@ -453,7 +487,7 @@ export default function Dashboard() {
               </div>
             ) : (
                 <div className="text-muted" style={{ padding: 'var(--space-8)', background: 'var(--surface-container-low)', borderRadius: 'var(--radius-lg)', textAlign: 'center' }}>
-                  No tailored resumes yet. Click "Tailor" on an original resume to create one.
+                  {generated.length === 0 ? 'No tailored resumes yet. Click "Tailor" on an original resume to create one.' : 'No tailored resumes match your filters.'}
                 </div>
             )}
           </div>

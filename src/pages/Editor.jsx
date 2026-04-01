@@ -40,6 +40,7 @@ export default function Editor() {
       if (path.includes('workExperience')) arr.push({ company: '', role: '', location: '', startDate: '', endDate: '', description: '', points: [], techStack: [] });
       else if (path.includes('projects')) arr.push({ name: '', description: '', points: [], techStack: [] });
       else if (path.includes('education')) arr.push({ institution: '', degree: '', field: '', startYear: '', endYear: '', score: '' });
+      else if (path.includes('skills')) arr.push({ name: '', items: [] });
       else arr.push('');
       return copy;
     });
@@ -72,7 +73,7 @@ export default function Editor() {
 
   if (!data) return <div className="loading-overlay"><div className="loading-pulse" /></div>;
 
-  const { personalInfo, workExperience = [], skills = {}, projects = [], education = [] } = data;
+  const { personalInfo, workExperience = [], skills = [], projects = [], education = [] } = data;
 
   return (
     <div className="page fade-in" style={{ maxWidth: '900px' }}>
@@ -126,9 +127,23 @@ export default function Editor() {
       </Section>
 
       {/* Skills */}
-      <Section title="Skills">
-        {['languages', 'frameworks', 'databases', 'tools', 'cloud', 'other'].map(cat => (
-          <TagField key={cat} label={cat.charAt(0).toUpperCase() + cat.slice(1)} value={(skills[cat] || []).join(', ')} onChange={v => updateField(`skills.${cat}`, v.split(',').map(s => s.trim()).filter(Boolean))} />
+      <Section title="Skills" onAdd={() => addItem('skills')}>
+        {(Array.isArray(skills) ? skills : []).map((skillCat, i) => (
+          <div key={i} className="card mb-4 slide-up" style={{ animationDelay: `${i * 0.05}s` }}>
+            <div className="flex justify-between items-center mb-4">
+              <input 
+                className="input title-md" 
+                style={{ background: 'transparent', border: 'none', padding: 0, outline: 'none', fontWeight: 600, maxWidth: '60%' }} 
+                value={skillCat.name} 
+                onChange={e => updateField(`skills.${i}.name`, e.target.value)} 
+                placeholder="Category Name" 
+              />
+              <button className="btn btn-sm btn-danger" onClick={() => removeItem('skills', i)}>
+                <HiOutlineTrash /> Remove
+              </button>
+            </div>
+            <TagField label="Skills" value={(skillCat.items || []).join(', ')} onChange={v => updateField(`skills.${i}.items`, v.split(',').map(s => s.trim()).filter(Boolean))} />
+          </div>
         ))}
       </Section>
 

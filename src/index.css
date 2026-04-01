@@ -326,6 +326,52 @@ textarea.input {
   color: var(--on-surface-variant);
 }
 
+.navbar-search {
+  flex: 1;
+  max-width: 400px;
+  margin: 0 var(--space-4);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-input-wrapper .search-icon {
+  position: absolute;
+  left: var(--space-3);
+  color: var(--outline);
+  pointer-events: none;
+}
+
+.search-input-wrapper .search-input {
+  padding-left: calc(var(--space-8) + var(--space-1));
+  padding-right: var(--space-8);
+  border-radius: 999px;
+  background: var(--surface-container-high);
+  border-color: rgba(116, 117, 125, 0.2);
+}
+
+.search-input-wrapper .search-input:focus {
+  background: var(--surface-container-highest);
+  border-color: var(--primary);
+}
+
+.search-input-wrapper .btn-icon {
+  position: absolute;
+  right: var(--space-1);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: var(--space-1);
+}
+
+.mobile-search-trigger {
+  display: none;
+}
+
 /* ═══════════════════════════════════════════════════
    Layout Helpers
    ═══════════════════════════════════════════════════ */
@@ -660,6 +706,31 @@ textarea.input {
   
   .navbar-actions .btn span {
     display: none;
+  }
+
+  .mobile-search-trigger {
+    display: inline-flex;
+  }
+
+  .navbar-search {
+    display: none;
+    margin: 0;
+    max-width: none;
+    flex: 1;
+  }
+
+  .navbar-search.active {
+    display: flex;
+    animation: slideInRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+
+  .navbar-actions.hidden {
+    display: none;
+  }
+
+  @keyframes slideInRight {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
   }
 
   .display-lg {

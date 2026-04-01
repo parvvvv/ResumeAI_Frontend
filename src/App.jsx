@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { SearchProvider } from './context/SearchContext';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -48,7 +49,9 @@ export default function App() {
       <AuthProvider>
         <ToastProvider>
           <NotificationProvider>
-            <AppRoutes />
+            <SearchProvider>
+              <AppRoutes />
+            </SearchProvider>
           </NotificationProvider>
         </ToastProvider>
       </AuthProvider>
