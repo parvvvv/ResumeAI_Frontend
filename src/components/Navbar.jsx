@@ -63,7 +63,7 @@ export default function Navbar() {
       </div>
 
       <div className={`navbar-actions ${isSearchActive ? 'hidden' : ''}`}>
-        <button className="btn btn-sm btn-icon mobile-search-trigger" onClick={() => {
+        <button className="btn btn-sm btn-icon btn-secondary mobile-search-trigger" onClick={() => {
           setIsSearchActive(true);
           setTimeout(() => searchInputRef.current?.focus(), 100);
         }}>
