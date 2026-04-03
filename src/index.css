@@ -1432,7 +1432,7 @@ textarea.input {
   text-align: center;
 }
 
-.modal-icon {
+.modal-icon, .modal-icon-small {
   width: 56px;
   height: 56px;
   margin: 0 auto var(--space-5);
@@ -1443,8 +1443,13 @@ textarea.input {
   justify-content: center;
   font-size: 1.5rem;
   color: #ff6b6b;
-  /* Ambient glow around icon */
   box-shadow: 0 0 24px rgba(255, 107, 107, 0.12);
+}
+
+.modal-icon-small {
+  width: 40px;
+  height: 40px;
+  font-size: 1.25rem;
 }
 
 .modal-content h3 {
@@ -1524,6 +1529,109 @@ textarea.input {
   to {
     transform: translateY(0) scale(1);
   }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-4);
+}
+
+.modal-header h3 {
+  margin: 0;
+}
+
+.modal-resume-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.modal-resume-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4);
+  background: rgba(35, 38, 46, 0.4);
+  border: 1px solid rgba(116, 117, 125, 0.15);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  width: 100%;
+  text-align: left;
+  color: var(--on-surface);
+}
+
+.modal-resume-item:hover {
+  background: rgba(133, 173, 255, 0.08);
+  border-color: rgba(133, 173, 255, 0.4);
+  transform: translateX(4px);
+}
+
+.modal-resume-item:active {
+  transform: translateX(2px);
+  background: rgba(133, 173, 255, 0.12);
+}
+
+.resume-icon-circle {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary);
+  transition: all 0.2s ease;
+}
+
+.modal-resume-item:hover .resume-icon-circle {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 0 15px rgba(133, 173, 255, 0.4);
+}
+
+.resume-item-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--on-surface);
+  margin-bottom: 2px;
+}
+
+.resume-item-subtitle {
+  font-size: 0.8rem;
+  color: var(--on-surface-variant);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal-resume-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* ═══════════════════════════════════════════════════

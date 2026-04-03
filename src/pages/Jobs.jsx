@@ -3,7 +3,8 @@ import { useJobs } from '../context/JobsContext';
 import { useNavigate } from 'react-router-dom';
 import {
   HiOutlineBriefcase, HiOutlineRefresh, HiOutlineExternalLink,
-  HiOutlineLocationMarker, HiOutlineClock, HiOutlineChevronLeft
+  HiOutlineLocationMarker, HiOutlineClock, HiOutlineChevronLeft,
+  HiOutlineDocumentText, HiOutlineX, HiOutlineSparkles
 } from 'react-icons/hi';
 
 /* ─── Skeleton Loader ─── */
@@ -38,8 +39,76 @@ function ProfileBadge({ profile }) {
   );
 }
 
+/* ─── Resume Selection Modal ─── */
+function ResumeSelectModal({ isOpen, onClose, resumes, onSelect, jobTitle, isTailoring }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content glass" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px', textAlign: 'left' }}>
+        <div className="modal-header">
+          <div className="flex items-center gap-3">
+            <div className="modal-icon-small" style={{ margin: 0, background: 'rgba(133, 173, 255, 0.1)', color: 'var(--primary)' }}>
+              <HiOutlineDocumentText />
+            </div>
+            <h3 className="display-sm" style={{ fontSize: '1.25rem', marginBottom: 0 }}>Select Base Resume</h3>
+          </div>
+          <button className="btn btn-icon btn-secondary" onClick={onClose} disabled={isTailoring}>
+            <HiOutlineX size={20} />
+          </button>
+        </div>
+        
+        <p className="body-md text-muted mb-6">
+          Choose a resume to tailor for <strong style={{ color: 'var(--on-surface)' }}>{jobTitle}</strong>
+        </p>
+
+        <div className="modal-resume-list custom-scrollbar">
+          {resumes.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-muted mb-4">No base resumes found.</p>
+              <button className="btn btn-primary" onClick={() => onClose()}>
+                Upload a Resume
+              </button>
+            </div>
+          ) : (
+            resumes.map((resume) => (
+              <button
+                key={resume.id}
+                className="modal-resume-item"
+                onClick={() => onSelect(resume.id)}
+                disabled={isTailoring}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="resume-icon-circle">
+                    <HiOutlineDocumentText size={20} />
+                  </div>
+                  <div className="text-left flex-1 truncate">
+                    <div className="resume-item-title truncate">
+                      {resume.resumeData?.personalInfo?.fullName || resume.resumeData?.personal?.name || 'Untitled Resume'}
+                    </div>
+                    <div className="resume-item-subtitle truncate">
+                      {resume.resumeData?.personalInfo?.email || resume.resumeData?.personal?.email || 'No email'}
+                    </div>
+                  </div>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+
+        {isTailoring && (
+          <div className="mt-6 flex items-center justify-center gap-3 py-3 px-4 glass-subtle rounded-xl border border-primary/20">
+            <span className="status-dot status-dot-pulse" style={{ '--dot-color': '#f59e0b', width: '10px', height: '10px' }} />
+            <span className="body-sm font-medium" style={{ color: 'var(--warning)' }}>Tailoring your resume...</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ─── Job Card (Grid/List compatible) ─── */
-function JobCard({ job, layout }) {
+function JobCard({ job, layout, onTailorClick, isTailoring }) {
   const logoFallback = job.company ? job.company.charAt(0).toUpperCase() : '?';
 
   const getTimeAgo = () => {
@@ -95,14 +164,24 @@ function JobCard({ job, layout }) {
           <div className="job-meta-item job-posted-badge mb-2 justify-end">
             <HiOutlineClock /> {getTimeAgo()}
           </div>
-          <a
-            href={job.apply_link}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-sm job-apply-btn"
-          >
-            Apply <HiOutlineExternalLink className="hide-on-mobile" />
-          </a>
+          <div className="flex gap-2">
+            <button
+              className="btn btn-sm btn-secondary"
+              onClick={() => onTailorClick(job)}
+              disabled={isTailoring}
+              title="Tailor your resume for this job"
+            >
+              <HiOutlineSparkles /> Tailor
+            </button>
+            <a
+              href={job.apply_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-sm job-apply-btn"
+            >
+              Apply <HiOutlineExternalLink className="hide-on-mobile" />
+            </a>
+          </div>
         </div>
       </div>
     );
@@ -151,13 +230,22 @@ function JobCard({ job, layout }) {
         {job.is_remote && <span className="job-type-chip job-chip-remote">Remote</span>}
       </div>
 
-      <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', marginTop: 'auto', paddingTop: '16px', display: 'flex', width: '100%' }}>
+      <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', marginTop: 'auto', paddingTop: '16px', display: 'flex', width: '100%', gap: '8px' }}>
+        <button
+          className="btn btn-sm btn-secondary"
+          onClick={() => onTailorClick(job)}
+          disabled={isTailoring}
+          title="Tailor your resume for this job"
+          style={{ flex: '0 0 auto' }}
+        >
+          <HiOutlineSparkles />
+        </button>
         <a
           href={job.apply_link}
           target="_blank"
           rel="noopener noreferrer"
           className="btn btn-sm job-apply-btn"
-          style={{ width: '100%', justifyContent: 'center' }}
+          style={{ flex: 1, justifyContent: 'center' }}
         >
           Apply Now <HiOutlineExternalLink />
         </a>
@@ -167,10 +255,12 @@ function JobCard({ job, layout }) {
 }
 
 export default function Jobs() {
-  const { jobs, profile, status, fetchJobs } = useJobs();
+  const { jobs, profile, status, baseResumes, tailoringStatus, fetchJobs, tailorForJob } = useJobs();
   const navigate = useNavigate();
   const [layout, setLayout] = useState('list'); // 'grid' | 'list'
   const [visibleCount, setVisibleCount] = useState(12);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedJob, setSelectedJob] = useState(null);
 
   const loading = status === 'loading';
   const hasJobs = jobs.length > 0;
@@ -184,6 +274,29 @@ export default function Jobs() {
     setVisibleCount((prev) => prev + (layout === 'grid' ? 6 : 10));
   };
 
+  const handleTailorClick = (job) => {
+    setSelectedJob(job);
+    setModalOpen(true);
+  };
+
+  const handleResumeSelect = async (baseResumeId) => {
+    if (!selectedJob) return;
+    try {
+      await tailorForJob(selectedJob.job_id, baseResumeId);
+      setModalOpen(false);
+      setSelectedJob(null);
+    } catch (err) {
+      console.error('Tailoring failed:', err);
+    }
+  };
+
+  const handleModalClose = () => {
+    if (!tailoringStatus[selectedJob?.job_id]) {
+      setModalOpen(false);
+      setSelectedJob(null);
+    }
+  };
+
   return (
     <div className="page jobs-page fade-in" style={{ paddingBottom: '140px' }}>
       {/* Header section */}
@@ -191,7 +304,7 @@ export default function Jobs() {
         <button className="btn btn-icon btn-secondary mb-4" onClick={() => navigate('/dashboard')}>
           <HiOutlineChevronLeft /> Back to Dashboard
         </button>
-        
+
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="display-md flex items-center gap-3">
@@ -204,11 +317,11 @@ export default function Jobs() {
               Auto-tailored to your generated resume summaries.
             </p>
           </div>
-          
+
           <div className="flex items-center gap-3">
             {profile && <ProfileBadge profile={profile} />}
-            <button 
-              className="btn btn-secondary flex items-center gap-2" 
+            <button
+              className="btn btn-secondary flex items-center gap-2"
               onClick={fetchJobs}
               disabled={loading}
             >
@@ -245,7 +358,7 @@ export default function Jobs() {
               <div className="text-muted text-sm">
                 Showing {visibleJobs.length} of {jobs.length} roles found
               </div>
-              
+
               <div className="view-toggle">
                 <button
                   className={`view-toggle-btn ${layout === 'grid' ? 'active' : ''}`}
@@ -280,13 +393,25 @@ export default function Jobs() {
             {layout === 'grid' ? (
               <div className="jobs-grid">
                 {visibleJobs.map((job) => (
-                  <JobCard key={job.job_id} job={job} layout="grid" />
+                  <JobCard
+                    key={job.job_id}
+                    job={job}
+                    layout="grid"
+                    onTailorClick={handleTailorClick}
+                    isTailoring={tailoringStatus[job.job_id] === 'loading'}
+                  />
                 ))}
               </div>
             ) : (
               <div className="jobs-list-container glass">
                 {visibleJobs.map((job) => (
-                  <JobCard key={job.job_id} job={job} layout="list" />
+                  <JobCard
+                    key={job.job_id}
+                    job={job}
+                    layout="list"
+                    onTailorClick={handleTailorClick}
+                    isTailoring={tailoringStatus[job.job_id] === 'loading'}
+                  />
                 ))}
               </div>
             )}
@@ -294,8 +419,8 @@ export default function Jobs() {
             {/* Pagination / Show More */}
             {visibleCount < jobs.length && (
               <div className="mt-8 flex justify-center">
-                <button 
-                  className="btn btn-secondary glass ambient-glow px-8" 
+                <button
+                  className="btn btn-secondary glass ambient-glow px-8"
                   onClick={handleShowMore}
                 >
                   Load More Roles
@@ -305,6 +430,16 @@ export default function Jobs() {
           </>
         )}
       </div>
+
+      {/* Resume Selection Modal */}
+      <ResumeSelectModal
+        isOpen={modalOpen}
+        onClose={handleModalClose}
+        resumes={baseResumes}
+        onSelect={handleResumeSelect}
+        jobTitle={selectedJob?.title || 'this job'}
+        isTailoring={selectedJob && tailoringStatus[selectedJob.job_id] === 'loading'}
+      />
     </div>
   );
 }

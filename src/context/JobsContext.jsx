@@ -7,7 +7,7 @@ const JobsContext = createContext(null);
 
 /**
  * JobsProvider — manages job recommendations state globally.
- * Exposes: jobs, profile, status, fetchJobs.
+ * Exposes: jobs, profile, status, fetchJobs, tailorForJob, baseResumes.
  *
  * Status values:
  *   'idle'      → grey  (no generated resumes yet / never fetched)
@@ -23,6 +23,8 @@ export function JobsProvider({ children }) {
   const [profile, setProfile] = useState(null);
   const [queryUsed, setQueryUsed] = useState('');
   const [status, setStatus] = useState('idle'); // idle | loading | found | empty | error
+  const [baseResumes, setBaseResumes] = useState([]);
+  const [tailoringStatus, setTailoringStatus] = useState({}); // { [job_id]: 'loading' | 'success' | 'error' }
   const hasFetchedRef = useRef(false);
 
   const fetchJobs = useCallback(async () => {
@@ -40,12 +42,38 @@ export function JobsProvider({ children }) {
     }
   }, []);
 
+  const fetchBaseResumes = useCallback(async () => {
+    try {
+      const res = await api.get('/resume');
+      setBaseResumes(res.data.resumes || []);
+    } catch (err) {
+      console.error('Failed to fetch base resumes:', err);
+    }
+  }, []);
+
+  const tailorForJob = useCallback(async (jobId, baseResumeId) => {
+    setTailoringStatus((prev) => ({ ...prev, [jobId]: 'loading' }));
+    try {
+      const res = await api.post('/jobs/tailor', {
+        job_id: jobId,
+        base_resume_id: baseResumeId,
+      });
+      setTailoringStatus((prev) => ({ ...prev, [jobId]: 'success' }));
+      return res.data;
+    } catch (err) {
+      console.error('Failed to tailor for job:', err);
+      setTailoringStatus((prev) => ({ ...prev, [jobId]: 'error' }));
+      throw err;
+    }
+  }, []);
+
   // Auto-fetch on first auth (only once)
   useEffect(() => {
     if (!isAuthenticated || hasFetchedRef.current) return;
     hasFetchedRef.current = true;
     fetchJobs();
-  }, [isAuthenticated, fetchJobs]);
+    fetchBaseResumes();
+  }, [isAuthenticated, fetchJobs, fetchBaseResumes]);
 
   // Re-fetch when a new tailored resume is created (background cron-like)
   useEffect(() => {
@@ -67,12 +95,24 @@ export function JobsProvider({ children }) {
       setProfile(null);
       setQueryUsed('');
       setStatus('idle');
+      setBaseResumes([]);
+      setTailoringStatus({});
       hasFetchedRef.current = false;
     }
   }, [isAuthenticated]);
 
   return (
-    <JobsContext.Provider value={{ jobs, profile, queryUsed, status, fetchJobs }}>
+    <JobsContext.Provider value={{
+      jobs,
+      profile,
+      queryUsed,
+      status,
+      baseResumes,
+      tailoringStatus,
+      fetchJobs,
+      fetchBaseResumes,
+      tailorForJob,
+    }}>
       {children}
     </JobsContext.Provider>
   );
