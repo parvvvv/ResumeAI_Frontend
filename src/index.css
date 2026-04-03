@@ -2081,6 +2081,30 @@ textarea.input {
   animation: spin 1s linear infinite;
 }
 
+/* ─── Tailoring States ─── */
+.btn-success {
+  background: rgba(16, 185, 129, 0.1) !important;
+  color: var(--success) !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+}
+
+.btn-success:hover {
+  background: var(--success) !important;
+  color: #fff !important;
+}
+
+.job-card-tailoring {
+  border-color: var(--warning) !important;
+  box-shadow: 0 0 24px rgba(245, 158, 11, 0.15) !important;
+  background: rgba(245, 158, 11, 0.02) !important;
+}
+
+.job-card-tailored {
+  border-color: var(--success) !important;
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.1) !important;
+  background: rgba(16, 185, 129, 0.02) !important;
+}
+
 /* Skeleton Loading Support */
 .job-skeleton {
   pointer-events: none;

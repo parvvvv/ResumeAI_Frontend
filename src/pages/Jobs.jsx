@@ -6,6 +6,7 @@ import {
   HiOutlineLocationMarker, HiOutlineClock, HiOutlineChevronLeft,
   HiOutlineDocumentText, HiOutlineX, HiOutlineSparkles
 } from 'react-icons/hi';
+import { useToast } from '../context/ToastContext';
 
 /* ─── Skeleton Loader ─── */
 function JobSkeleton() {
@@ -108,8 +109,9 @@ function ResumeSelectModal({ isOpen, onClose, resumes, onSelect, jobTitle, isTai
 }
 
 /* ─── Job Card (Grid/List compatible) ─── */
-function JobCard({ job, layout, onTailorClick, isTailoring }) {
+function JobCard({ job, layout, onTailorClick, isTailoring, isTailored }) {
   const logoFallback = job.company ? job.company.charAt(0).toUpperCase() : '?';
+  const cardClass = `slide-up ${layout === 'list' ? 'jobs-list-card' : 'job-card'} ${isTailoring ? 'job-card-tailoring' : ''} ${isTailored ? 'job-card-tailored' : ''}`;
 
   const getTimeAgo = () => {
     if (!job.posted_at) return job.posted_at_label || '';
@@ -125,7 +127,7 @@ function JobCard({ job, layout, onTailorClick, isTailoring }) {
 
   if (layout === 'list') {
     return (
-      <div className="jobs-list-card fade-in">
+      <div className={cardClass + ' fade-in'}>
         <div className="jobs-list-logo-col">
           {job.company_logo ? (
             <img
@@ -166,12 +168,12 @@ function JobCard({ job, layout, onTailorClick, isTailoring }) {
           </div>
           <div className="flex gap-2">
             <button
-              className="btn btn-sm btn-secondary"
+              className={`btn btn-sm ${isTailored ? 'btn-success' : 'btn-secondary'}`}
               onClick={() => onTailorClick(job)}
-              disabled={isTailoring}
-              title="Tailor your resume for this job"
+              disabled={isTailoring || isTailored}
+              title={isTailored ? "Already tailored" : "Tailor your resume for this job"}
             >
-              <HiOutlineSparkles /> Tailor
+              <HiOutlineSparkles /> {isTailored ? 'Tailored' : 'Tailor'}
             </button>
             <a
               href={job.apply_link}
@@ -189,7 +191,7 @@ function JobCard({ job, layout, onTailorClick, isTailoring }) {
 
   // Grid layout (default)
   return (
-    <div className="job-card slide-up">
+    <div className={cardClass}>
       <div className="job-card-header flex justify-between" style={{ minWidth: 0 }}>
         <div className="flex gap-3" style={{ minWidth: 0, flex: 1 }}>
           {job.company_logo ? (
@@ -232,10 +234,10 @@ function JobCard({ job, layout, onTailorClick, isTailoring }) {
 
       <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', marginTop: 'auto', paddingTop: '16px', display: 'flex', width: '100%', gap: '8px' }}>
         <button
-          className="btn btn-sm btn-secondary"
+          className={`btn btn-sm ${isTailored ? 'btn-success' : 'btn-secondary'}`}
           onClick={() => onTailorClick(job)}
-          disabled={isTailoring}
-          title="Tailor your resume for this job"
+          disabled={isTailoring || isTailored}
+          title={isTailored ? "Already tailored" : "Tailor your resume for this job"}
           style={{ flex: '0 0 auto' }}
         >
           <HiOutlineSparkles />
@@ -257,6 +259,7 @@ function JobCard({ job, layout, onTailorClick, isTailoring }) {
 export default function Jobs() {
   const { jobs, profile, status, baseResumes, tailoringStatus, fetchJobs, tailorForJob } = useJobs();
   const navigate = useNavigate();
+  const { addToast } = useToast();
   const [layout, setLayout] = useState('list'); // 'grid' | 'list'
   const [visibleCount, setVisibleCount] = useState(12);
   const [modalOpen, setModalOpen] = useState(false);
@@ -282,19 +285,33 @@ export default function Jobs() {
   const handleResumeSelect = async (baseResumeId) => {
     if (!selectedJob) return;
     try {
+      // Start tailoring process
       await tailorForJob(selectedJob.job_id, baseResumeId);
+      
+      // Close modal immediately since backend now returns 202 Accepted almost instantly
       setModalOpen(false);
       setSelectedJob(null);
+      
+      // Provide immediate feedback
+      addToast('Tailoring process started 🚀 You\'ll see the new resume on your dashboard soon.', 'success');
+
+      // Navigate to dashboard immediately so user can see progress (as they requested)
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 300);
+
     } catch (err) {
       console.error('Tailoring failed:', err);
+      // Even on error, we should allow closing or show error in modal
+      addToast('Failed to start tailoring. Please try again.', 'error');
     }
   };
 
   const handleModalClose = () => {
-    if (!tailoringStatus[selectedJob?.job_id]) {
-      setModalOpen(false);
-      setSelectedJob(null);
-    }
+    // Allow closing the modal if not in the middle of a blocking action
+    // Since tailorForJob is now very fast, we can almost always allow closing
+    setModalOpen(false);
+    setSelectedJob(null);
   };
 
   return (
@@ -399,6 +416,7 @@ export default function Jobs() {
                     layout="grid"
                     onTailorClick={handleTailorClick}
                     isTailoring={tailoringStatus[job.job_id] === 'loading'}
+                    isTailored={tailoringStatus[job.job_id] === 'success'}
                   />
                 ))}
               </div>
@@ -411,6 +429,7 @@ export default function Jobs() {
                     layout="list"
                     onTailorClick={handleTailorClick}
                     isTailoring={tailoringStatus[job.job_id] === 'loading'}
+                    isTailored={tailoringStatus[job.job_id] === 'success'}
                   />
                 ))}
               </div>
