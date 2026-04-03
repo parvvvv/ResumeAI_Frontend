@@ -11,7 +11,7 @@ import {
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { useNotificationEvents } from '../context/NotificationContext';
+import { useResumes } from '../context/ResumeContext';
 import { useSearch } from '../context/SearchContext';
 
 /* ─── Score Ring Component ─── */
@@ -206,9 +206,16 @@ function ConfirmModal({ isOpen, title, message, onConfirm, onCancel, confirmLabe
 
 /* ─── Main Dashboard ─── */
 export default function Dashboard() {
-  const [baseResumes, setBaseResumes] = useState([]);
-  const [generated, setGenerated] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { 
+    baseResumes, 
+    generatedResumes: generated, 
+    loading: contextLoading, 
+    hasInitialFetch,
+    fetchResumes,
+    deleteBase,
+    deleteGenerated 
+  } = useResumes();
+  
   const [deleting, setDeleting] = useState(null);
   const [selectedBaseId, setSelectedBaseId] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', onConfirm: null });
@@ -217,47 +224,10 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { addToast } = useToast();
-  const { onEvent, offEvent } = useNotificationEvents();
   const { searchQuery, setSearchQuery } = useSearch();
 
-  // ── Fetch data ──
-  const fetchData = useCallback(async () => {
-    try {
-      const [baseRes, genRes] = await Promise.all([
-        api.get('/resume'),
-        api.get('/dashboard'),
-      ]);
-      setBaseResumes(baseRes.data.resumes || []);
-      setGenerated(genRes.data.resumes || []);
-    } catch (err) {
-      console.error('Failed to load dashboard:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  // ── Subscribe to SSE events for auto-refresh ──
-  useEffect(() => {
-    const handleTailorComplete = () => {
-      fetchData();
-    };
-
-    const handlePdfReady = () => {
-      fetchData();
-    };
-
-    onEvent('tailor_complete', handleTailorComplete);
-    onEvent('pdf_ready', handlePdfReady);
-
-    return () => {
-      offEvent('tailor_complete', handleTailorComplete);
-      offEvent('pdf_ready', handlePdfReady);
-    };
-  }, [onEvent, offEvent, fetchData]);
+  // Show full-page overlay ONLY on the very first cold load
+  const loading = contextLoading && (!hasInitialFetch || (baseResumes.length === 0 && generated.length === 0));
 
   // ── Delete Handlers ──
   const closeModal = () => setConfirmModal({ open: false, title: '', message: '', onConfirm: null });
@@ -270,8 +240,7 @@ export default function Dashboard() {
       onConfirm: async () => {
         setDeleting(id);
         try {
-          await api.delete(`/resume/${id}`);
-          setBaseResumes(r => r.filter(x => x.id !== id));
+          await deleteBase(id);
           if (selectedBaseId === id) setSelectedBaseId(null);
           addToast('Original resume deleted.', 'success');
         } catch (err) {
@@ -293,8 +262,7 @@ export default function Dashboard() {
       onConfirm: async () => {
         setDeleting(id);
         try {
-          await api.delete(`/resume/generated/${id}`);
-          setGenerated(r => r.filter(x => x.id !== id));
+          await deleteGenerated(id);
           addToast('Tailored resume deleted.', 'success');
         } catch (err) {
           console.error('Failed to delete resume:', err);

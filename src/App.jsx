@@ -4,6 +4,7 @@ import { ToastProvider } from './context/ToastContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { SearchProvider } from './context/SearchContext';
 import { JobsProvider } from './context/JobsContext';
+import { ResumeProvider } from './context/ResumeContext';
 import Navbar from './components/Navbar';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -53,9 +54,11 @@ export default function App() {
         <ToastProvider>
           <NotificationProvider>
             <SearchProvider>
-              <JobsProvider>
-                <AppRoutes />
-              </JobsProvider>
+              <ResumeProvider>
+                <JobsProvider>
+                  <AppRoutes />
+                </JobsProvider>
+              </ResumeProvider>
             </SearchProvider>
           </NotificationProvider>
         </ToastProvider>

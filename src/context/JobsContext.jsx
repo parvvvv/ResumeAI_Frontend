@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { useNotificationEvents } from './NotificationContext';
+import { useResumes } from './ResumeContext';
 import api from '../api/client';
 
 const JobsContext = createContext(null);
@@ -19,11 +20,11 @@ const JobsContext = createContext(null);
 export function JobsProvider({ children }) {
   const { isAuthenticated } = useAuth();
   const { onEvent, offEvent } = useNotificationEvents();
+  const { baseResumes } = useResumes();
   const [jobs, setJobs] = useState([]);
   const [profile, setProfile] = useState(null);
   const [queryUsed, setQueryUsed] = useState('');
   const [status, setStatus] = useState('idle'); // idle | loading | found | empty | error
-  const [baseResumes, setBaseResumes] = useState([]);
   const [tailoringStatus, setTailoringStatus] = useState({}); // { [job_id]: 'loading' | 'success' | 'error' }
   const hasFetchedRef = useRef(false);
 
@@ -42,14 +43,6 @@ export function JobsProvider({ children }) {
     }
   }, []);
 
-  const fetchBaseResumes = useCallback(async () => {
-    try {
-      const res = await api.get('/resume');
-      setBaseResumes(res.data.resumes || []);
-    } catch (err) {
-      console.error('Failed to fetch base resumes:', err);
-    }
-  }, []);
 
   const tailorForJob = useCallback(async (jobId, baseResumeId) => {
     setTailoringStatus((prev) => ({ ...prev, [jobId]: 'loading' }));
@@ -72,8 +65,7 @@ export function JobsProvider({ children }) {
     if (!isAuthenticated || hasFetchedRef.current) return;
     hasFetchedRef.current = true;
     fetchJobs();
-    fetchBaseResumes();
-  }, [isAuthenticated, fetchJobs, fetchBaseResumes]);
+  }, [isAuthenticated, fetchJobs]);
 
   // Re-fetch when a new tailored resume is created (background cron-like)
   useEffect(() => {
@@ -95,7 +87,6 @@ export function JobsProvider({ children }) {
       setProfile(null);
       setQueryUsed('');
       setStatus('idle');
-      setBaseResumes([]);
       setTailoringStatus({});
       hasFetchedRef.current = false;
     }
@@ -110,7 +101,6 @@ export function JobsProvider({ children }) {
       baseResumes,
       tailoringStatus,
       fetchJobs,
-      fetchBaseResumes,
       tailorForJob,
     }}>
       {children}
