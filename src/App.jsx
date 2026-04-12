@@ -6,6 +6,7 @@ import { SearchProvider } from './context/SearchContext';
 import { JobsProvider } from './context/JobsContext';
 import { ResumeProvider } from './context/ResumeContext';
 import Navbar from './components/Navbar';
+import ChatbotPanel from './components/chatbot';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
@@ -27,6 +28,7 @@ function AppRoutes() {
   return (
     <>
       <Navbar />
+      {isAuthenticated && <ChatbotPanel />}
       <Routes>
         {/* Public */}
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Login />} />
