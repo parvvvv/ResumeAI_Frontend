@@ -1,62 +1,71 @@
-# ResumeAI - Frontend
+# ResumeAI ✨ — Frontend (v2.0)
 
-The gorgeous, interactive UI of ResumeAI. Designed with a custom "Kinetic Architect" CSS system replacing traditional utility classes, enabling pixel-perfect glassmorphism panels, ambient glows, and minimal layouts.
+The immersive, interactive interface of ResumeAI. Built with a focus on high-fidelity aesthetics, real-time feedback, and production-grade performance.
 
-## 🎨 Tech Stack
+---
 
-- **Framework**: [React](https://react.dev/)
-- **Build Tool**: [Vite](https://vitejs.dev/) (blazing fast HMR)
-- **Routing**: [React Router](https://reactrouter.com/) (BrowserRouter)
-- **State Management**: [React Context](https://react.dev/reference/react/useContext) API (Auth & Notifications)
-- **Networking**: [Axios](https://axios-http.com/) with JWT interceptors
-- **Icons**: [React Icons](https://react-icons.github.io/react-icons/) (Heroicons)
+## 🏗️ Architecture & UX Design
 
-## ✨ UI/UX Highlights
+### 🎨 Kinetic Architecture
+ResumeAI implements **Kinetic Architecture**—a custom CSS design system focused on depth, light, and motion.
+- **Micro-interactions**: Every button and card utilizes `pulse-glow` and `hover-lift` effects for tactile feedback.
+- **Glassmorphism**: 100% borderless UI that relies on `backdrop-filter: blur(12px)` and tonal elevation for hierarchy.
+- **Fluid Layouts**: Purely responsive engine that adapts from ultra-wide monitors to mobile screens without layout shifts.
 
-1. **Kinetic Architecture Design System**:
-    - **No-Line Rule**: Avoids hard borders. UI depth relies on tonal shifts (`var(--surface-raised)`), `backdrop-filter: blur`, and `box-shadows`.
-    - **Glassmorphism Layering**: Active elements (`glass` panels) use semi-transparent dark backgrounds stacked on an animated mesh gradient root.
-    - **Micro-animations**: Subtle `pulse-glow`, `ambient-glow`, and `slide-up` CSS keyframes for immediate tactile feedback.
+### ⚡ Real-time Event Orchestration
+The frontend uses a custom **Event Hub** to handle backend streaming:
+- **Server-Sent Events (SSE)**: Synchronized via a global notification context, allowing for non-blocking UI during heavy AI processing.
+- **Optimistic UI Updates**: Dashboard cards update immediately, with rolling background syncs for data consistency.
 
-2. **Real-time Event Toast Notifications**:
-    - Uses a custom Context Provider to listen to Server-Sent Events (SSE) from the FastAPI backend. Whenever a tailored resume or PDF is generated asynchronously, a toast notification slides in dynamically.
+---
 
-3. **Intelligent Modals**:
-    - Complete abandonment of native browser `alert()` or `confirm()` dialogs. Instead, there's a custom-built, fully animated declarative modal engine for actions like Deletions or Confirmation warnings.
+## 🚀 Performance & Optimization
 
-## 🚀 Setup Instructions
+To ensure a smooth 60fps experience even during complex AI streaming:
+- **Component Memoization**: Heavy components like the `Editor` and `RadarChart` use `React.memo` and `useMemo` to prevent unnecessary re-renders.
+- **Asset Optimization**: SVGs are used for all iconography (`React-Icons`) to ensure crisp rendering at any scale.
+- **Lazy Loading**: Route-based code splitting ensures that the initial bundle size remains minimal.
+- **Efficient State**: Utilizes the Context API for global state (Auth/Notifications) while keeping local state encapsulated to avoid global re-renders.
 
-### 1. Requirements
-* Node.js v18+
-* Npm, Yarn, or pnpm
+---
 
-### 2. Environment Variables
-Create a `.env` in the `frontend` root:
-```env
-VITE_API_URL=http://localhost:8000/api
-```
+## ♿ Accessibility & Standards
 
-### 3. Installation
+- **Semantic HTML**: Proper use of `<main>`, `<section>`, and `<nav>` landmarks.
+- **Keyboard Navigation**: Fully navigable via Tab/Enter keys with custom focus rings that respect the "No-Line Rule."
+- **Screen Reader Support**: ARIA labels on all icon-only buttons (like the Chatbot trigger).
+- **Color Contrast**: Accessible contrast ratios maintained across the glassmorphism theme.
+
+---
+
+## 🛠️ Tech Stack
+
+| Tool | Purpose |
+| :--- | :--- |
+| **React 18** | UI Foundation |
+| **Vite** | Build Tooling |
+| **React Router 6** | Navigation |
+| **Axios** | API Interceptors (JWT Management) |
+| **Framer Motion** | Advanced UI Animations & Transitions |
+
+---
+
+## 🗺️ Roadmap to 10/10 (Production Scaling)
+
+- [ ] **State Migration**: Transition to Redux Toolkit or TanStack Query for complex cache management.
+- [ ] **E2E Testing**: Implement Playwright for critical user flows (Login → Search → Tailor).
+- [ ] **PWA Support**: Offline caching and installable app experience.
+- [ ] **Analytics**: Integration of post-apply tracking and AI conversion metrics.
+
+---
+
+## ⚡ Setup & Development
+
 ```bash
 npm install
-```
-
-### 4. Running the Dev Server
-Start the Vite development environment:
-```bash
 npm run dev
 ```
-Navigate to `http://localhost:5173`. We strongly recommend installing React DevTools for seamless debugging.
+Visit `http://localhost:5173`.
 
-## 📂 Project Structure
-
-```text
-src/
-├── api/                # Axios instance configuration & request/response JWT interceptors
-├── assets/             # Global static media 
-├── components/         # Reusable React components (Modals, Navbars, Toasts, ScoreRings)
-├── context/            # React Contexts (AuthContext, NotificationContext)
-├── pages/              # Primary route views (Dashboard, Upload, Preview, Login)
-├── App.jsx             # React-Router definitions & Context boundary definitions
-└── index.css           # Global Kinetic Architect Design System tokens & layout primitives
-```
+---
+*Empowering careers with AI.*
