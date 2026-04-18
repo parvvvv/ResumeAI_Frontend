@@ -19,7 +19,7 @@ const JobsContext = createContext(null);
  */
 export function JobsProvider({ children }) {
   const { isAuthenticated } = useAuth();
-  const { onEvent, offEvent } = useNotificationEvents();
+  const { onEvent, offEvent, setProcessingJobs, emit } = useNotificationEvents();
   const { baseResumes } = useResumes();
   const [jobs, setJobs] = useState([]);
   const [profile, setProfile] = useState(null);
@@ -45,20 +45,112 @@ export function JobsProvider({ children }) {
 
 
   const tailorForJob = useCallback(async (jobId, baseResumeId) => {
+    // 1. Seed the jobs UI state
     setTailoringStatus((prev) => ({ ...prev, [jobId]: 'loading' }));
-    try {
-      const res = await api.post('/jobs/tailor', {
-        job_id: jobId,
-        base_resume_id: baseResumeId,
-      });
-      setTailoringStatus((prev) => ({ ...prev, [jobId]: 'success' }));
-      return res.data;
-    } catch (err) {
-      console.error('Failed to tailor for job:', err);
-      setTailoringStatus((prev) => ({ ...prev, [jobId]: 'error' }));
-      throw err;
-    }
-  }, []);
+
+    // 2. Seed the global progress state so the Dashboard ProcessingCard appears!
+    setProcessingJobs((prev) => ({
+      ...prev,
+      [baseResumeId]: { percent: 5, stage: 0, message: 'Warming up AI...' },
+    }));
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    // Run Stream in background so we don't block
+    (async () => {
+      try {
+        const response = await fetch('/api/jobs/tailor', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ job_id: jobId, base_resume_id: baseResumeId }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split('\n\n');
+          buffer = parts.pop();
+
+          for (const part of parts) {
+            if (!part.trim()) continue;
+
+            let eventType = 'message';
+            let eventData = '';
+
+            for (const line of part.split('\n')) {
+              if (line.startsWith('event: ')) {
+                eventType = line.slice(7).trim();
+              } else if (line.startsWith('data: ')) {
+                eventData = line.slice(6);
+              }
+            }
+
+            if (!eventData) continue;
+
+            try {
+              const payload = JSON.parse(eventData);
+              const { data, message } = payload;
+
+              if (eventType === 'tailor_progress') {
+                setProcessingJobs((prev) => ({
+                  ...prev,
+                  [baseResumeId]: {
+                    percent: data?.percent ?? 0,
+                    stage: data?.stage ?? 0,
+                    message: message || '',
+                  },
+                }));
+              } else if (eventType === 'tailor_complete') {
+                setTailoringStatus((prev) => ({ ...prev, [jobId]: 'success' }));
+                setProcessingJobs((prev) => ({
+                  ...prev,
+                  [baseResumeId]: { percent: 100, stage: 5, message: 'Done!' },
+                }));
+                setTimeout(() => {
+                  setProcessingJobs((prev) => {
+                    const next = { ...prev };
+                    delete next[baseResumeId];
+                    return next;
+                  });
+                }, 1200);
+                emit('tailor_complete', payload);
+              } else if (eventType === 'tailor_failed') {
+                setTailoringStatus((prev) => ({ ...prev, [jobId]: 'error' }));
+                setProcessingJobs((prev) => {
+                  const next = { ...prev };
+                  delete next[baseResumeId];
+                  return next;
+                });
+                emit('tailor_failed', payload);
+              }
+            } catch { /* ignore parse error */ }
+          }
+        }
+      } catch (err) {
+        console.error('Job tailor stream error:', err);
+        setTailoringStatus((prev) => ({ ...prev, [jobId]: 'error' }));
+        setProcessingJobs((prev) => {
+           const next = { ...prev };
+           delete next[baseResumeId];
+           return next;
+        });
+      }
+    })();
+  }, [setProcessingJobs, emit]);
 
   // Auto-fetch on first auth (only once)
   useEffect(() => {

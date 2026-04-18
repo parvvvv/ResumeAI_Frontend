@@ -5,9 +5,9 @@ import { useToast } from './ToastContext';
 const NotificationContext = createContext(null);
 
 /**
- * NotificationProvider — manages the SSE connection and provides a pub/sub
- * system so any component can react to specific notification events.
- * Also tracks real-time progress for tailoring (processingJobs) and parsing (parseProgress).
+ * NotificationProvider — manages the SSE connection for general notifications
+ * and provides startTailorStream() for streaming tailor progress directly from
+ * the /api/resume/tailor endpoint.
  */
 export function NotificationProvider({ children }) {
   const { isAuthenticated } = useAuth();
@@ -17,7 +17,7 @@ export function NotificationProvider({ children }) {
   const reconnectTimerRef = useRef(null);
 
   // --- Progress state ---
-  // processingJobs: { [baseResumeId]: { percent, stage, earlyAtsScore?, matchedKeywords?, missingKeywords? } }
+  // processingJobs: { [baseResumeId]: { percent, stage, message, earlyAtsScore?, matchedKeywords?, missingKeywords? } }
   const [processingJobs, setProcessingJobs] = useState({});
   // parseProgress: { percent, stage } | null
   const [parseProgress, setParseProgress] = useState(null);
@@ -40,7 +40,120 @@ export function NotificationProvider({ children }) {
     });
   }, []);
 
-  // --- SSE Connection ---
+  // --- Streaming tailor progress ---
+  const startTailorStream = useCallback((baseResumeId, jobDescription) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    // Seed processingJobs immediately so the card appears
+    setProcessingJobs((prev) => ({
+      ...prev,
+      [baseResumeId]: { percent: 5, stage: 0, message: 'Starting AI tailoring...' },
+    }));
+
+    // Fire-and-forget — the promise keeps running after navigation
+    (async () => {
+      try {
+        const response = await fetch('/api/resume/tailor', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ baseResumeId, jobDescription }),
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(errText || `HTTP ${response.status}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // Parse SSE events from buffer
+          const parts = buffer.split('\n\n');
+          buffer = parts.pop(); // keep incomplete chunk
+
+          for (const part of parts) {
+            if (!part.trim()) continue;
+
+            let eventType = 'message';
+            let eventData = '';
+
+            for (const line of part.split('\n')) {
+              if (line.startsWith('event: ')) {
+                eventType = line.slice(7).trim();
+              } else if (line.startsWith('data: ')) {
+                eventData = line.slice(6);
+              }
+            }
+
+            if (!eventData) continue;
+
+            try {
+              const payload = JSON.parse(eventData);
+              const { data, message } = payload;
+
+              if (eventType === 'tailor_progress') {
+                setProcessingJobs((prev) => ({
+                  ...prev,
+                  [baseResumeId]: {
+                    percent: data?.percent ?? 0,
+                    stage: data?.stage ?? 0,
+                    message: message || '',
+                    earlyAtsScore: data?.earlyAtsScore ?? prev[baseResumeId]?.earlyAtsScore,
+                    matchedKeywords: data?.matchedKeywords ?? prev[baseResumeId]?.matchedKeywords,
+                    missingKeywords: data?.missingKeywords ?? prev[baseResumeId]?.missingKeywords,
+                  },
+                }));
+              } else if (eventType === 'tailor_complete') {
+                // Set to 100% briefly so the bar completes, then remove
+                setProcessingJobs((prev) => ({
+                  ...prev,
+                  [baseResumeId]: { percent: 100, stage: 5, message: 'Done!' },
+                }));
+                setTimeout(() => {
+                  setProcessingJobs((prev) => {
+                    const next = { ...prev };
+                    delete next[baseResumeId];
+                    return next;
+                  });
+                }, 1200);
+                addToast(payload.message || 'Resume tailored successfully!', 'success', 6000);
+                emit('tailor_complete', payload);
+              } else if (eventType === 'tailor_failed') {
+                setProcessingJobs((prev) => {
+                  const next = { ...prev };
+                  delete next[baseResumeId];
+                  return next;
+                });
+                addToast(payload.message || 'Tailoring failed.', 'error', 8000);
+                emit('tailor_failed', payload);
+              }
+            } catch { /* ignore parse errors */ }
+          }
+        }
+      } catch (err) {
+        console.error('Tailor stream error:', err);
+        setProcessingJobs((prev) => {
+          const next = { ...prev };
+          delete next[baseResumeId];
+          return next;
+        });
+        addToast('Tailoring failed. Please try again.', 'error', 8000);
+      }
+    })();
+  }, [addToast, emit]);
+
+  // --- SSE Connection (for parse progress, PDF events, etc.) ---
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -64,28 +177,6 @@ export function NotificationProvider({ children }) {
           const { data, message } = payload;
           setParseProgress({ percent: data?.percent ?? 0, stage: message });
           emit('parse_progress', payload);
-        } catch { /* ignore */ }
-      });
-
-      // --- Tailor Progress ---
-      es.addEventListener('tailor_progress', (e) => {
-        try {
-          const payload = JSON.parse(e.data);
-          const { data, message } = payload;
-          const baseResumeId = data?.baseResumeId;
-          if (!baseResumeId) return;
-
-          setProcessingJobs((prev) => ({
-            ...prev,
-            [baseResumeId]: {
-              percent: data.percent ?? 0,
-              stage: message,
-              earlyAtsScore: data.earlyAtsScore ?? prev[baseResumeId]?.earlyAtsScore,
-              matchedKeywords: data.matchedKeywords ?? prev[baseResumeId]?.matchedKeywords,
-              missingKeywords: data.missingKeywords ?? prev[baseResumeId]?.missingKeywords,
-            },
-          }));
-          emit('tailor_progress', payload);
         } catch { /* ignore */ }
       });
 
@@ -126,52 +217,6 @@ export function NotificationProvider({ children }) {
         }
       });
 
-      // --- Tailor Complete: remove from processingJobs + toast ---
-      es.addEventListener('tailor_complete', (e) => {
-        try {
-          const payload = JSON.parse(e.data);
-          const baseResumeId = payload.data?.baseResumeId;
-          if (baseResumeId) {
-            // Set to 100% briefly so the bar completes, then remove
-            setProcessingJobs((prev) => ({
-              ...prev,
-              [baseResumeId]: { ...prev[baseResumeId], percent: 100, stage: '✅ Done!' },
-            }));
-            setTimeout(() => {
-              setProcessingJobs((prev) => {
-                const next = { ...prev };
-                delete next[baseResumeId];
-                return next;
-              });
-            }, 1200);
-          }
-          addToast(payload.message || 'Resume tailored successfully!', 'success', 6000);
-          emit('tailor_complete', payload);
-        } catch {
-          addToast('Resume tailored!', 'success', 6000);
-          emit('tailor_complete', {});
-        }
-      });
-
-      // --- Tailor Failed ---
-      es.addEventListener('tailor_failed', (e) => {
-        try {
-          const payload = JSON.parse(e.data);
-          const baseResumeId = payload.data?.baseResumeId;
-          if (baseResumeId) {
-            setProcessingJobs((prev) => {
-              const next = { ...prev };
-              delete next[baseResumeId];
-              return next;
-            });
-          }
-          addToast(payload.message || 'Tailoring failed.', 'error', 8000);
-          emit('tailor_failed', payload);
-        } catch {
-          addToast('Tailoring failed.', 'error', 8000);
-        }
-      });
-
       es.onerror = () => {
         es.close();
         // Reconnect after 3 seconds
@@ -193,7 +238,7 @@ export function NotificationProvider({ children }) {
   }, [isAuthenticated, addToast, emit]);
 
   return (
-    <NotificationContext.Provider value={{ onEvent, offEvent, processingJobs, setProcessingJobs, parseProgress, setParseProgress }}>
+    <NotificationContext.Provider value={{ onEvent, offEvent, processingJobs, setProcessingJobs, parseProgress, setParseProgress, startTailorStream }}>
       {children}
     </NotificationContext.Provider>
   );

@@ -2,12 +2,11 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { NotificationProvider } from './context/NotificationContext';
-import { useNotificationEvents } from './context/NotificationContext';
 import { SearchProvider } from './context/SearchContext';
 import { JobsProvider } from './context/JobsContext';
 import { ResumeProvider } from './context/ResumeContext';
 import Navbar from './components/Navbar';
-import TopProgressBar from './components/TopProgressBar';
+
 import ChatbotPanel from './components/chatbot';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -26,25 +25,9 @@ function ProtectedRoute({ children }) {
 
 function AppRoutes() {
   const { isAuthenticated } = useAuth();
-  const { processingJobs, parseProgress } = useNotificationEvents();
-
-  // Derive a single top-level progress value:
-  //   - parseProgress takes priority when actively parsing
-  //   - otherwise use the highest percent across all tailoring jobs
-  const activeProgress = (() => {
-    if (parseProgress) return parseProgress;
-    const jobs = Object.values(processingJobs);
-    if (jobs.length === 0) return null;
-    // Show the job with the highest current percent
-    return jobs.reduce((max, j) => (j.percent > max.percent ? j : max), jobs[0]);
-  })();
 
   return (
     <>
-      <TopProgressBar
-        progress={activeProgress?.percent ?? null}
-        stage={activeProgress?.stage ?? null}
-      />
       <Navbar />
       {isAuthenticated && <ChatbotPanel />}
       <Routes>

@@ -42,53 +42,72 @@ function ScoreRing({ score, size = 28, strokeWidth = 2.5, showValue = true }) {
 /* ─── Processing Card ─── */
 function ProcessingCard({ baseResumeId, job, baseResumes }) {
   const baseName = baseResumes.find(b => b.id === baseResumeId)?.resumeData?.personalInfo?.fullName || 'Resume';
-  const { percent, stage, earlyAtsScore, matchedKeywords } = job;
+  const { percent, stage, message } = job;
+  const totalSteps = 5;
+
+  const getStageIcon = () => {
+    switch (stage) {
+      case 0: return <HiOutlineDocumentText className="pulse-icon" />;
+      case 1: return <HiOutlineSparkles className="pulse-icon" />;
+      case 2: return <HiOutlineLightningBolt className="pulse-icon" />;
+      case 3: return <HiOutlinePencilAlt className="pulse-icon" />;
+      case 4: return <HiOutlineShieldCheck className="pulse-icon" />;
+      case 5: return <HiOutlineDocumentAdd className="pulse-icon" />;
+      default: return <HiOutlineSparkles className="pulse-icon" />;
+    }
+  };
 
   return (
-    <div className="processing-card glass slide-up">
+    <div className="processing-card glass slide-up" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Header */}
-      <div className="processing-card-header">
+      <div className="processing-card-header flex justify-between items-center">
         <div>
-          <div className="title-md" style={{ marginBottom: 4 }}>Tailoring in Progress</div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>
-            <span style={{ color: 'var(--primary)', opacity: 0.7 }}>↳</span> {baseName}
+          <div className="title-md" style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="icon-badge primary">{getStageIcon()}</div>
+            Tailoring in Progress
+          </div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', paddingLeft: '40px' }}>
+            ↳ {baseName}
           </div>
         </div>
-        <span className="processing-badge">AI Working</span>
+        <span className="badge" style={{ background: 'var(--primary-alpha)', color: 'var(--primary)', borderColor: 'var(--primary-border)' }}>
+          {stage ? `Step ${stage} of ${totalSteps}` : 'Warming up...'}
+        </span>
       </div>
 
-      {/* Stage message */}
-      <p className="processing-stage">{stage || '🔍 Starting...'}</p>
-
-      {/* Progress bar */}
-      <div className="processing-bar-track">
-        <div
-          className="processing-bar-fill"
-          style={{ width: `${percent}%` }}
-        >
-          <div className="processing-bar-shimmer" />
-        </div>
-      </div>
-      <div className="processing-bar-footer">
-        <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{percent}%</span>
-        {earlyAtsScore > 0 && (
-          <span style={{ color: 'var(--on-surface-variant)', fontSize: '0.75rem' }}>
-            Early ATS est. <span style={{ color: earlyAtsScore >= 75 ? 'var(--success)' : earlyAtsScore >= 50 ? 'var(--warning)' : 'var(--error)', fontWeight: 700 }}>{earlyAtsScore}%</span>
-          </span>
-        )}
-      </div>
-
-      {/* Early keyword preview */}
-      {matchedKeywords?.length > 0 && (
-        <div className="processing-keywords">
-          {matchedKeywords.slice(0, 5).map((kw, i) => (
-            <span key={i} className="keyword-tag">{kw}</span>
-          ))}
-          {matchedKeywords.length > 5 && (
-            <span style={{ fontSize: '0.7rem', color: 'var(--outline)' }}>+{matchedKeywords.length - 5} more</span>
-          )}
+      {/* Highlighted Message Box */}
+      {message && (
+        <div style={{
+          backgroundColor: 'rgba(133, 173, 255, 0.08)',
+          border: '1px solid rgba(133, 173, 255, 0.2)',
+          borderRadius: '8px',
+          padding: '10px 14px',
+          fontSize: '0.85rem',
+          fontWeight: 500,
+          color: 'var(--primary)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          transition: 'all 0.3s ease',
+        }}>
+          {message}
         </div>
       )}
+
+      {/* Progress bar */}
+      <div className="mt-2">
+        <div className="processing-bar-track" style={{ height: '6px', overflow: 'hidden' }}>
+          <div
+            className="processing-bar-fill"
+            style={{ width: `${percent}%`, transition: 'width 0.4s ease' }}
+          >
+            <div className="processing-bar-shimmer" />
+          </div>
+        </div>
+        <div className="flex justify-end mt-2">
+          <span style={{ color: 'var(--primary)', fontWeight: 600, fontSize: '0.85rem' }}>{percent}%</span>
+        </div>
+      </div>
     </div>
   );
 }

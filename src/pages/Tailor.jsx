@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { HiOutlineSparkles } from 'react-icons/hi';
-import api from '../api/client';
 import { useToast } from '../context/ToastContext';
 import { useNotificationEvents } from '../context/NotificationContext';
 
@@ -9,7 +8,7 @@ export default function Tailor() {
   const { resumeId } = useParams();
   const navigate = useNavigate();
   const { addToast } = useToast();
-  const { processingJobs, setProcessingJobs } = useNotificationEvents();
+  const { processingJobs, startTailorStream } = useNotificationEvents();
   const [jobDescription, setJobDescription] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -25,29 +24,12 @@ export default function Tailor() {
     setError('');
     setSubmitting(true);
 
-    // Seed processingJobs immediately so progress bar + card appear instantly
-    setProcessingJobs((prev) => ({
-      ...prev,
-      [resumeId]: { percent: 5, stage: '🚀 Submitting tailoring request...' },
-    }));
+    // Start the streaming tailor (runs in background, persists across navigation)
+    startTailorStream(resumeId, jobDescription.trim());
 
-    // Show toast and navigate immediately — don't wait for the API
+    // Show toast and navigate immediately
     addToast('Tailoring in progress — we\'ll notify you when it\'s ready!', 'info', 5000);
     navigate('/dashboard');
-
-    // Fire-and-forget
-    api.post('/resume/tailor', {
-      baseResumeId: resumeId,
-      jobDescription: jobDescription.trim(),
-    }).catch((err) => {
-      console.error('Tailor API error:', err);
-      // Remove the seeded job on immediate API failure
-      setProcessingJobs((prev) => {
-        const next = { ...prev };
-        delete next[resumeId];
-        return next;
-      });
-    });
   };
 
   return (

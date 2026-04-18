@@ -5,7 +5,7 @@
  */
 import { useEffect, useState } from 'react';
 
-export default function TopProgressBar({ progress, stage }) {
+export default function TopProgressBar({ progress }) {
   const [visible, setVisible] = useState(false);
   const [displayProgress, setDisplayProgress] = useState(0);
 
@@ -24,7 +24,7 @@ export default function TopProgressBar({ progress, stage }) {
       const t = setTimeout(() => setVisible(false), 800);
       return () => clearTimeout(t);
     }
-  }, [progress, stage]);
+  }, [progress]);
 
   if (!visible) return null;
 
@@ -48,12 +48,6 @@ export default function TopProgressBar({ progress, stage }) {
           />
         )}
       </div>
-      {/* Stage label — floats under the bar, right-aligned */}
-      {stage && (
-        <div className="top-progress-stage-label">
-          {stage}
-        </div>
-      )}
     </div>
   );
 }
