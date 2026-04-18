@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { HiOutlineCloudUpload, HiOutlineDocumentText } from 'react-icons/hi';
 import api from '../api/client';
+import { useNotificationEvents } from '../context/NotificationContext';
 
 export default function Upload() {
   const [dragging, setDragging] = useState(false);
@@ -9,6 +10,7 @@ export default function Upload() {
   const [error, setError] = useState('');
   const fileRef = useRef(null);
   const navigate = useNavigate();
+  const { parseProgress, setParseProgress } = useNotificationEvents();
 
   const handleFile = async (file) => {
     if (!file) return;
@@ -23,14 +25,19 @@ export default function Upload() {
 
     setError('');
     setUploading(true);
+    // Seed an initial stage immediately so UI reacts before SSE arrives
+    setParseProgress({ percent: 5, stage: 'Uploading PDF...' });
+
     try {
       const formData = new FormData();
       formData.append('file', file);
       const res = await api.post('/resume/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+      setParseProgress(null);
       navigate(`/editor/${res.data.id}`, { state: { resumeData: res.data.resumeData } });
     } catch (err) {
+      setParseProgress(null);
       setError(err.response?.data?.detail || 'Upload failed. Please try again.');
     } finally {
       setUploading(false);
@@ -43,6 +50,9 @@ export default function Upload() {
     handleFile(e.dataTransfer.files[0]);
   };
 
+  const activeStage = parseProgress?.stage ?? 'Processing...';
+  const activePercent = parseProgress?.percent ?? 5;
+
   return (
     <div className="page fade-in">
       <div className="mb-6">
@@ -53,10 +63,25 @@ export default function Upload() {
       {error && <div className="alert alert-error mb-4">{error}</div>}
 
       {uploading ? (
-        <div className="loading-overlay">
-          <div className="loading-pulse" />
-          <p className="title-md">Parsing your resume with AI...</p>
-          <p className="text-muted">This may take a few seconds</p>
+        <div className="parse-progress-overlay">
+          {/* Circular ring */}
+          <div className="parse-ring-wrapper">
+            <svg className="parse-ring-svg" viewBox="0 0 64 64">
+              <circle className="parse-ring-track" cx="32" cy="32" r="28" />
+              <circle
+                className="parse-ring-fill"
+                cx="32" cy="32" r="28"
+                strokeDasharray={`${2 * Math.PI * 28}`}
+                strokeDashoffset={`${2 * Math.PI * 28 * (1 - activePercent / 100)}`}
+              />
+            </svg>
+            <span className="parse-ring-pct">{activePercent}%</span>
+          </div>
+          <p className="title-md parse-stage-label">{activeStage}</p>
+          <p className="text-muted" style={{ fontSize: '0.82rem' }}>This may take a few seconds</p>
+          <div className="parse-linear-track">
+            <div className="parse-linear-fill" style={{ width: `${activePercent}%` }} />
+          </div>
         </div>
       ) : (
         <div

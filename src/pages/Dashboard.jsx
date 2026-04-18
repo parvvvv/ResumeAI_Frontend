@@ -13,6 +13,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useResumes } from '../context/ResumeContext';
 import { useSearch } from '../context/SearchContext';
+import { useNotificationEvents } from '../context/NotificationContext';
 
 /* ─── Score Ring Component ─── */
 function ScoreRing({ score, size = 28, strokeWidth = 2.5, showValue = true }) {
@@ -34,6 +35,60 @@ function ScoreRing({ score, size = 28, strokeWidth = 2.5, showValue = true }) {
         />
       </svg>
       {showValue && <span className="ring-value">{score > 0 ? score : ''}</span>}
+    </div>
+  );
+}
+
+/* ─── Processing Card ─── */
+function ProcessingCard({ baseResumeId, job, baseResumes }) {
+  const baseName = baseResumes.find(b => b.id === baseResumeId)?.resumeData?.personalInfo?.fullName || 'Resume';
+  const { percent, stage, earlyAtsScore, matchedKeywords } = job;
+
+  return (
+    <div className="processing-card glass slide-up">
+      {/* Header */}
+      <div className="processing-card-header">
+        <div>
+          <div className="title-md" style={{ marginBottom: 4 }}>Tailoring in Progress</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>
+            <span style={{ color: 'var(--primary)', opacity: 0.7 }}>↳</span> {baseName}
+          </div>
+        </div>
+        <span className="processing-badge">AI Working</span>
+      </div>
+
+      {/* Stage message */}
+      <p className="processing-stage">{stage || '🔍 Starting...'}</p>
+
+      {/* Progress bar */}
+      <div className="processing-bar-track">
+        <div
+          className="processing-bar-fill"
+          style={{ width: `${percent}%` }}
+        >
+          <div className="processing-bar-shimmer" />
+        </div>
+      </div>
+      <div className="processing-bar-footer">
+        <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{percent}%</span>
+        {earlyAtsScore > 0 && (
+          <span style={{ color: 'var(--on-surface-variant)', fontSize: '0.75rem' }}>
+            Early ATS est. <span style={{ color: earlyAtsScore >= 75 ? 'var(--success)' : earlyAtsScore >= 50 ? 'var(--warning)' : 'var(--error)', fontWeight: 700 }}>{earlyAtsScore}%</span>
+          </span>
+        )}
+      </div>
+
+      {/* Early keyword preview */}
+      {matchedKeywords?.length > 0 && (
+        <div className="processing-keywords">
+          {matchedKeywords.slice(0, 5).map((kw, i) => (
+            <span key={i} className="keyword-tag">{kw}</span>
+          ))}
+          {matchedKeywords.length > 5 && (
+            <span style={{ fontSize: '0.7rem', color: 'var(--outline)' }}>+{matchedKeywords.length - 5} more</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -215,6 +270,7 @@ export default function Dashboard() {
     deleteBase,
     deleteGenerated 
   } = useResumes();
+  const { processingJobs } = useNotificationEvents();
   
   const [deleting, setDeleting] = useState(null);
   const [selectedBaseId, setSelectedBaseId] = useState(null);
@@ -445,6 +501,17 @@ export default function Dashboard() {
                 </button>
               )}
             </div>
+
+            {/* Processing cards — one per active tailoring job */}
+            {Object.entries(processingJobs).map(([baseResumeId, job]) => (
+              <ProcessingCard
+                key={baseResumeId}
+                baseResumeId={baseResumeId}
+                job={job}
+                baseResumes={baseResumes}
+              />
+            ))}
+
             {filteredGenerated.length > 0 ? (
               <>
                 <div className="grid-cards" style={{ gap: '1.5rem' }}>

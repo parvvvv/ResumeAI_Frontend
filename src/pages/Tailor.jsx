@@ -3,14 +3,19 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { HiOutlineSparkles } from 'react-icons/hi';
 import api from '../api/client';
 import { useToast } from '../context/ToastContext';
+import { useNotificationEvents } from '../context/NotificationContext';
 
 export default function Tailor() {
   const { resumeId } = useParams();
   const navigate = useNavigate();
   const { addToast } = useToast();
+  const { processingJobs, setProcessingJobs } = useNotificationEvents();
   const [jobDescription, setJobDescription] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // If this resume is already being tailored, show that state
+  const isProcessing = !!processingJobs[resumeId];
 
   const handleTailor = () => {
     if (jobDescription.trim().length < 10) {
@@ -20,17 +25,28 @@ export default function Tailor() {
     setError('');
     setSubmitting(true);
 
+    // Seed processingJobs immediately so progress bar + card appear instantly
+    setProcessingJobs((prev) => ({
+      ...prev,
+      [resumeId]: { percent: 5, stage: '🚀 Submitting tailoring request...' },
+    }));
+
     // Show toast and navigate immediately — don't wait for the API
     addToast('Tailoring in progress — we\'ll notify you when it\'s ready!', 'info', 5000);
     navigate('/dashboard');
 
-    // Fire-and-forget: send the API request in the background
+    // Fire-and-forget
     api.post('/resume/tailor', {
       baseResumeId: resumeId,
       jobDescription: jobDescription.trim(),
     }).catch((err) => {
       console.error('Tailor API error:', err);
-      // If the API call fails, the SSE tailor_failed event will also notify
+      // Remove the seeded job on immediate API failure
+      setProcessingJobs((prev) => {
+        const next = { ...prev };
+        delete next[resumeId];
+        return next;
+      });
     });
   };
 
@@ -53,9 +69,14 @@ export default function Tailor() {
         />
       </div>
 
-      <button className="btn btn-primary btn-lg btn-lg-mobile" onClick={handleTailor} disabled={submitting} style={{ width: '100%' }}>
-        {submitting ? (
-          <><span className="spinner" /> Submitting...</>
+      <button
+        className="btn btn-primary btn-lg btn-lg-mobile"
+        onClick={handleTailor}
+        disabled={submitting || isProcessing}
+        style={{ width: '100%' }}
+      >
+        {submitting || isProcessing ? (
+          <><span className="spinner" /> {isProcessing ? 'Already tailoring...' : 'Submitting...'}</>
         ) : (
           <><HiOutlineSparkles /> Tailor My Resume</>
         )}

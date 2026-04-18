@@ -2539,3 +2539,258 @@ textarea.input {
   background: var(--surface-bright);
   color: var(--on-surface-variant);
 }
+
+/* ═══════════════════════════════════════════════════
+   Top Progress Bar (Stripe/Linear style)
+   ═══════════════════════════════════════════════════ */
+
+.top-progress-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  padding-bottom: 10px; /* 10px gap between bar and anything below it */
+  pointer-events: none;
+}
+
+.top-progress-track {
+  position: relative;
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: visible;
+}
+
+.top-progress-bar {
+  position: relative;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #6366f1 0%, #85adff 50%, #22c55e 100%);
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.35), 0 0 20px rgba(34, 197, 94, 0.2);
+  overflow: hidden;
+}
+
+/* Shimmer sweep */
+.top-progress-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.35) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-sweep 1.6s linear infinite;
+}
+
+@keyframes shimmer-sweep {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Glowing leading edge */
+.top-progress-glow-head {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 8px 4px rgba(34, 197, 94, 0.5), 0 0 20px 8px rgba(99, 102, 241, 0.25);
+  transition: left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Stage label (small text below the bar) */
+.top-progress-stage-label {
+  position: absolute;
+  right: var(--space-4);
+  top: 6px;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: rgba(170, 170, 179, 0.75);
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  animation: fadeIn 0.3s ease-out;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════
+   Dashboard Processing Card
+   ═══════════════════════════════════════════════════ */
+
+.processing-card {
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(99, 102, 241, 0.18) !important;
+  background: rgba(23, 25, 33, 0.7) !important;
+  box-shadow: 0 0 30px rgba(99, 102, 241, 0.08);
+}
+
+.processing-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+
+.processing-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6366f1;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+  /* Gentle pulse to signal activity */
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+.processing-stage {
+  font-size: 0.82rem;
+  color: var(--on-surface-variant);
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+  min-height: 1.2em;
+  transition: all 0.3s ease;
+}
+
+/* Progress bar track */
+.processing-bar-track {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.processing-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #6366f1 0%, #85adff 60%, #22c55e 100%);
+  transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
+}
+
+.processing-bar-shimmer {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-sweep 1.4s linear infinite;
+}
+
+.processing-bar-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  margin-bottom: 0.6rem;
+}
+
+.processing-keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 0.5rem;
+}
+
+/* ═══════════════════════════════════════════════════
+   Upload Page — Parse Progress Overlay
+   ═══════════════════════════════════════════════════ */
+
+.parse-progress-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-16);
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* SVG ring */
+.parse-ring-wrapper {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+}
+
+.parse-ring-svg {
+  width: 80px;
+  height: 80px;
+  transform: rotate(-90deg);
+}
+
+.parse-ring-track {
+  fill: none;
+  stroke: rgba(116, 117, 125, 0.15);
+  stroke-width: 5;
+}
+
+.parse-ring-fill {
+  fill: none;
+  stroke: url(#parseGrad);
+  stroke-width: 5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Fallback color when SVG grad not defined */
+  stroke: #6366f1;
+}
+
+.parse-ring-pct {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--on-surface);
+}
+
+.parse-stage-label {
+  color: var(--on-surface);
+  font-size: 1rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  min-height: 1.5em;
+}
+
+/* Linear bar under ring */
+.parse-linear-track {
+  width: min(320px, 80%);
+  height: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.parse-linear-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #6366f1 0%, #22c55e 100%);
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 6px rgba(99, 102, 241, 0.4);
+}

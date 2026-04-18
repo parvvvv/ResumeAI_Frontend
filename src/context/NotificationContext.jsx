@@ -7,6 +7,7 @@ const NotificationContext = createContext(null);
 /**
  * NotificationProvider — manages the SSE connection and provides a pub/sub
  * system so any component can react to specific notification events.
+ * Also tracks real-time progress for tailoring (processingJobs) and parsing (parseProgress).
  */
 export function NotificationProvider({ children }) {
   const { isAuthenticated } = useAuth();
@@ -14,6 +15,12 @@ export function NotificationProvider({ children }) {
   const listenersRef = useRef({});    // { eventName: Set<callback> }
   const eventSourceRef = useRef(null);
   const reconnectTimerRef = useRef(null);
+
+  // --- Progress state ---
+  // processingJobs: { [baseResumeId]: { percent, stage, earlyAtsScore?, matchedKeywords?, missingKeywords? } }
+  const [processingJobs, setProcessingJobs] = useState({});
+  // parseProgress: { percent, stage } | null
+  const [parseProgress, setParseProgress] = useState(null);
 
   // --- Pub/Sub API ---
   const onEvent = useCallback((eventName, callback) => {
@@ -49,6 +56,38 @@ export function NotificationProvider({ children }) {
       const url = `/api/notifications/stream?token=${encodeURIComponent(token)}`;
       const es = new EventSource(url);
       eventSourceRef.current = es;
+
+      // --- Parse Progress ---
+      es.addEventListener('parse_progress', (e) => {
+        try {
+          const payload = JSON.parse(e.data);
+          const { data, message } = payload;
+          setParseProgress({ percent: data?.percent ?? 0, stage: message });
+          emit('parse_progress', payload);
+        } catch { /* ignore */ }
+      });
+
+      // --- Tailor Progress ---
+      es.addEventListener('tailor_progress', (e) => {
+        try {
+          const payload = JSON.parse(e.data);
+          const { data, message } = payload;
+          const baseResumeId = data?.baseResumeId;
+          if (!baseResumeId) return;
+
+          setProcessingJobs((prev) => ({
+            ...prev,
+            [baseResumeId]: {
+              percent: data.percent ?? 0,
+              stage: message,
+              earlyAtsScore: data.earlyAtsScore ?? prev[baseResumeId]?.earlyAtsScore,
+              matchedKeywords: data.matchedKeywords ?? prev[baseResumeId]?.matchedKeywords,
+              missingKeywords: data.missingKeywords ?? prev[baseResumeId]?.missingKeywords,
+            },
+          }));
+          emit('tailor_progress', payload);
+        } catch { /* ignore */ }
+      });
 
       // --- PDF Ready: actionable toast with download ---
       es.addEventListener('pdf_ready', (e) => {
@@ -87,10 +126,25 @@ export function NotificationProvider({ children }) {
         }
       });
 
-      // --- Tailor Complete: toast + emit for dashboard refresh ---
+      // --- Tailor Complete: remove from processingJobs + toast ---
       es.addEventListener('tailor_complete', (e) => {
         try {
           const payload = JSON.parse(e.data);
+          const baseResumeId = payload.data?.baseResumeId;
+          if (baseResumeId) {
+            // Set to 100% briefly so the bar completes, then remove
+            setProcessingJobs((prev) => ({
+              ...prev,
+              [baseResumeId]: { ...prev[baseResumeId], percent: 100, stage: '✅ Done!' },
+            }));
+            setTimeout(() => {
+              setProcessingJobs((prev) => {
+                const next = { ...prev };
+                delete next[baseResumeId];
+                return next;
+              });
+            }, 1200);
+          }
           addToast(payload.message || 'Resume tailored successfully!', 'success', 6000);
           emit('tailor_complete', payload);
         } catch {
@@ -103,6 +157,14 @@ export function NotificationProvider({ children }) {
       es.addEventListener('tailor_failed', (e) => {
         try {
           const payload = JSON.parse(e.data);
+          const baseResumeId = payload.data?.baseResumeId;
+          if (baseResumeId) {
+            setProcessingJobs((prev) => {
+              const next = { ...prev };
+              delete next[baseResumeId];
+              return next;
+            });
+          }
           addToast(payload.message || 'Tailoring failed.', 'error', 8000);
           emit('tailor_failed', payload);
         } catch {
@@ -131,7 +193,7 @@ export function NotificationProvider({ children }) {
   }, [isAuthenticated, addToast, emit]);
 
   return (
-    <NotificationContext.Provider value={{ onEvent, offEvent }}>
+    <NotificationContext.Provider value={{ onEvent, offEvent, processingJobs, setProcessingJobs, parseProgress, setParseProgress }}>
       {children}
     </NotificationContext.Provider>
   );
