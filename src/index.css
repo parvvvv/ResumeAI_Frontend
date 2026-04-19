@@ -2164,12 +2164,12 @@ textarea.input {
   background: var(--primary-dim);
   color: #fff;
   border: none;
-  cursor: pointer;
+  cursor: grab;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 24px rgba(20, 112, 232, 0.35);
-  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
 }
 
 .chatbot-fab:hover {
@@ -2179,20 +2179,73 @@ textarea.input {
 }
 
 .chatbot-fab:active {
-  transform: scale(0.95);
+  cursor: grabbing;
+}
+
+/* Mobile Pinpoint Tab */
+.chatbot-pinpoint {
+  position: fixed;
+  bottom: 2rem;
+  right: -4px;
+  z-index: 1050;
+  width: 24px;
+  height: 60px;
+  border-radius: 12px 0 0 12px;
+  background: var(--primary);
+  border: none;
+  cursor: pointer;
+  box-shadow: -2px 0 12px rgba(20, 112, 232, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.chatbot-pinpoint:hover {
+  background: var(--primary-container);
+  transform: translateX(-4px);
+}
+
+.chatbot-pinpoint-bar {
+  width: 4px;
+  height: 20px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+/* Left anchor overrides for dynamic snapping */
+.chatbot-fab.is-left {
+  right: auto;
+  left: 1.5rem;
+}
+
+.chatbot-pinpoint.is-left {
+  right: auto;
+  left: -4px;
+  border-radius: 0 12px 12px 0;
+}
+
+.chatbot-panel.is-left {
+  right: auto;
+  left: 24px;
+}
+
+.chatbot-panel--mobile.is-left {
+  left: 12px;
+  right: 12px;
 }
 
 /* Panel */
 .chatbot-panel {
   position: fixed;
-  top: 80px;          /* gap below navbar */
-  right: 16px;        /* gap from right edge */
-  bottom: 16px;       /* gap from bottom */
+  top: 80px;
+  right: 24px;
+  bottom: 84px;
   width: 390px;
   z-index: 1050;
   background: var(--surface-container-high);
   border: 1px solid var(--outline-variant);
-  border-radius: 20px; /* fully rounded all corners */
+  border-radius: 20px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -2209,7 +2262,6 @@ textarea.input {
   left: 12px;
   bottom: 12px;
   width: auto;
-  border-left: none;
   border-radius: 20px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
 }

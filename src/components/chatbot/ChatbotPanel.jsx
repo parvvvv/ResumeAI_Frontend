@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, X, Trash2, Bot } from 'lucide-react';
 import ChatMessage from './ChatMessage';
@@ -14,10 +14,15 @@ const SUGGESTIONS = [
 
 const ChatbotPanel = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
+  const [isLeft, setIsLeft] = useState(false);
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const messagesEndRef = useRef(null);
+  const fabRef = useRef(null);
+  const dragStartRef = useRef({ x: 0, y: 0, fabLeft: 0, fabTop: 0 });
   const { addToast } = useToast();
 
   // Check responsiveness
@@ -53,6 +58,91 @@ const ChatbotPanel = () => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isLoading, isOpen]);
+
+  // --- Native pointer drag for FAB ---
+  const handlePointerDown = useCallback((e) => {
+    if (!fabRef.current) return;
+    e.preventDefault();
+    const rect = fabRef.current.getBoundingClientRect();
+    dragStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      fabLeft: rect.left,
+      fabTop: rect.top,
+    };
+    setIsDragging(false);
+    fabRef.current.setPointerCapture(e.pointerId);
+  }, []);
+
+  const handlePointerMove = useCallback((e) => {
+    if (!fabRef.current || !fabRef.current.hasPointerCapture(e.pointerId)) return;
+    const dx = e.clientX - dragStartRef.current.x;
+    const dy = e.clientY - dragStartRef.current.y;
+    // Only start dragging after 5px threshold to not block clicks
+    if (!isDragging && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+      setIsDragging(true);
+    }
+    if (isDragging || Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+      const newLeft = dragStartRef.current.fabLeft + dx;
+      const newTop = dragStartRef.current.fabTop + dy;
+      fabRef.current.style.position = 'fixed';
+      fabRef.current.style.left = `${newLeft}px`;
+      fabRef.current.style.top = `${newTop}px`;
+      fabRef.current.style.right = 'auto';
+      fabRef.current.style.bottom = 'auto';
+    }
+  }, [isDragging]);
+
+  const handlePointerUp = useCallback((e) => {
+    if (!fabRef.current) return;
+    fabRef.current.releasePointerCapture(e.pointerId);
+
+    if (!isDragging) return; // It was a click, not a drag
+
+    const screenW = window.innerWidth;
+    const fabCenterX = e.clientX;
+    const goLeft = fabCenterX < screenW / 2;
+    setIsLeft(goLeft);
+
+    // Reset inline styles so CSS classes take over
+    fabRef.current.style.left = '';
+    fabRef.current.style.top = '';
+    fabRef.current.style.right = '';
+    fabRef.current.style.bottom = '';
+    fabRef.current.style.position = '';
+
+    // Mobile: collapse to pinpoint if dragged off the edge
+    if (isMobile) {
+      if ((goLeft && fabCenterX < 40) || (!goLeft && fabCenterX > screenW - 40)) {
+        setIsPinned(true);
+      }
+    }
+
+    setIsDragging(false);
+  }, [isDragging, isMobile]);
+
+  const handleFabClick = useCallback(() => {
+    if (!isDragging) {
+      setIsOpen(true);
+    }
+  }, [isDragging]);
+
+  const handleClose = useCallback(() => {
+    setIsOpen(false);
+    // Never set isPinned on close — always show the FAB
+  }, []);
+
+  const panelVariants = {
+    hidden: isMobile
+      ? { opacity: 0, y: 30, scale: 0.97 }
+      : { opacity: 0, y: 20, scale: 0.97 },
+    visible: isMobile
+      ? { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', damping: 26, stiffness: 220 } }
+      : { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', damping: 28, stiffness: 240 } },
+    exit: isMobile
+      ? { opacity: 0, y: 20, scale: 0.97, transition: { duration: 0.18 } }
+      : { opacity: 0, y: 12, scale: 0.97, transition: { duration: 0.18 } }
+  };
 
   const handleSendMessage = async (query) => {
     if (!query.trim() || isLoading) return;
@@ -104,34 +194,42 @@ const ChatbotPanel = () => {
     addToast('Chat history cleared', 'success');
   };
 
-  const panelVariants = {
-    hidden: isMobile
-      ? { opacity: 0, y: 30, scale: 0.97 }
-      : { opacity: 0, y: 20, scale: 0.97 },
-    visible: isMobile
-      ? { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', damping: 26, stiffness: 220 } }
-      : { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', damping: 28, stiffness: 240 } },
-    exit: isMobile
-      ? { opacity: 0, y: 20, scale: 0.97, transition: { duration: 0.18 } }
-      : { opacity: 0, y: 12, scale: 0.97, transition: { duration: 0.18 } }
-  };
-
   return (
     <>
-      {/* Floating Toggle Button */}
+      {/* Floating Toggle Button or Pinpoint */}
       <AnimatePresence>
-        {!isOpen && (
+        {!isOpen && !isPinned && (
           <motion.button
+            ref={fabRef}
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setIsOpen(true)}
-            className="chatbot-fab"
+            className={`chatbot-fab ${isLeft ? 'is-left' : ''}`}
             aria-label="Open Assistant"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onClick={handleFabClick}
+            style={{ touchAction: 'none' }}
           >
             <MessageCircle size={26} />
+          </motion.button>
+        )}
+        {!isOpen && isPinned && (
+          <motion.button
+            initial={{ x: isLeft ? -30 : 30, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: isLeft ? -30 : 30, opacity: 0 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => {
+              setIsOpen(true);
+              setIsPinned(false);
+            }}
+            className={`chatbot-pinpoint ${isLeft ? 'is-left' : ''}`}
+            aria-label="Open Assistant"
+          >
+            <div className="chatbot-pinpoint-bar" />
           </motion.button>
         )}
       </AnimatePresence>
@@ -146,7 +244,7 @@ const ChatbotPanel = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                onClick={() => setIsOpen(false)}
+                onClick={handleClose}
                 className="chatbot-backdrop"
               />
             )}
@@ -156,7 +254,7 @@ const ChatbotPanel = () => {
               initial="hidden"
               animate="visible"
               exit="exit"
-              className={`chatbot-panel${isMobile ? ' chatbot-panel--mobile' : ''}`}
+              className={`chatbot-panel${isMobile ? ' chatbot-panel--mobile' : ''} ${isLeft ? 'is-left' : ''}`}
             >
               {/* Header */}
               <div className="chatbot-header">
@@ -183,7 +281,7 @@ const ChatbotPanel = () => {
                   </button>
                   <button
                     className="chatbot-icon-btn"
-                    onClick={() => setIsOpen(false)}
+                    onClick={handleClose}
                     aria-label="Close"
                   >
                     <X size={19} />
