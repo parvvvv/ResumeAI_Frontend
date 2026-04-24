@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   HiOutlineUpload, HiOutlinePencilAlt, HiOutlineSparkles,
   HiOutlineDocumentText, HiOutlineDownload, HiOutlineEye,
@@ -7,6 +8,7 @@ import {
   HiOutlineChevronDown, HiOutlineChevronUp,
   HiOutlineShieldCheck, HiOutlineSwitchHorizontal,
   HiOutlineLightningBolt, HiOutlineTag,
+  HiOutlineArrowLeft, HiOutlineArrowRight
 } from 'react-icons/hi';
 import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -58,54 +60,35 @@ function ProcessingCard({ baseResumeId, job, baseResumes }) {
   };
 
   return (
-    <div className="processing-card glass slide-up" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div className="processing-card glass slide-up flex flex-col gap-4">
       {/* Header */}
       <div className="processing-card-header flex justify-between items-center">
         <div>
-          <div className="title-md" style={{ marginBottom: 4, display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="title-md flex items-center gap-2 mb-1">
             <div className="icon-badge primary">{getStageIcon()}</div>
             Tailoring in Progress
           </div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--on-surface-variant)', paddingLeft: '40px' }}>
-            ↳ {baseName}
-          </div>
+          <div className="processing-stage-label">↳ {baseName}</div>
         </div>
-        <span className="badge" style={{ background: 'var(--primary-alpha)', color: 'var(--primary)', borderColor: 'var(--primary-border)' }}>
+        <span className="badge badge-primary">
           {stage ? `Step ${stage} of ${totalSteps}` : 'Warming up...'}
         </span>
       </div>
 
       {/* Highlighted Message Box */}
       {message && (
-        <div style={{
-          backgroundColor: 'rgba(133, 173, 255, 0.08)',
-          border: '1px solid rgba(133, 173, 255, 0.2)',
-          borderRadius: '8px',
-          padding: '10px 14px',
-          fontSize: '0.85rem',
-          fontWeight: 500,
-          color: 'var(--primary)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          transition: 'all 0.3s ease',
-        }}>
-          {message}
-        </div>
+        <div className="processing-message-box">{message}</div>
       )}
 
       {/* Progress bar */}
       <div className="mt-2">
-        <div className="processing-bar-track" style={{ height: '6px', overflow: 'hidden' }}>
-          <div
-            className="processing-bar-fill"
-            style={{ width: `${percent}%`, transition: 'width 0.4s ease' }}
-          >
+        <div className="processing-bar-track processing-bar-height">
+          <div className="processing-bar-fill" style={{ width: `${percent}%` }}>
             <div className="processing-bar-shimmer" />
           </div>
         </div>
         <div className="flex justify-end mt-2">
-          <span style={{ color: 'var(--primary)', fontWeight: 600, fontSize: '0.85rem' }}>{percent}%</span>
+          <span className="processing-percent">{percent}%</span>
         </div>
       </div>
     </div>
@@ -250,14 +233,15 @@ function OverflowMenu({ items }) {
 
 /* ─── Confirm Modal ─── */
 function ConfirmModal({ isOpen, title, message, onConfirm, onCancel, confirmLabel = 'Delete', isLoading = false }) {
-  if (!isOpen) return null;
-
-  // Close on Escape key
+  // Close on Escape key — hook must be called before any early return
   useEffect(() => {
+    if (!isOpen) return;
     const handleEsc = (e) => { if (e.key === 'Escape') onCancel(); };
     document.addEventListener('keydown', handleEsc);
     return () => document.removeEventListener('keydown', handleEsc);
-  }, [onCancel]);
+  }, [isOpen, onCancel]);
+
+  if (!isOpen) return null;
 
   return (
     <div className="modal-overlay" onClick={onCancel}>
@@ -295,7 +279,10 @@ export default function Dashboard() {
   const [selectedBaseId, setSelectedBaseId] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', onConfirm: null });
   const [baseLimit, setBaseLimit] = useState(4);
-  const [generatedLimit, setGeneratedLimit] = useState(4);
+  
+  const [deckIndex, setDeckIndex] = useState(0);
+  const [swipeDirection, setSwipeDirection] = useState(0);
+
   const navigate = useNavigate();
   const { user } = useAuth();
   const { addToast } = useToast();
@@ -350,6 +337,92 @@ export default function Dashboard() {
     });
   };
 
+  // ── Compute chunks and apply hooks before any early returns ──
+  const filteredGenerated = generated.filter((r) => {
+    if (selectedBaseId && r.baseResumeId !== selectedBaseId) return false;
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const baseResume = baseResumes.find(b => b.id === r.baseResumeId);
+      const baseName = baseResume?.resumeData?.personalInfo?.fullName || '';
+      
+      // Search in summary
+      if (r.summary && r.summary.toLowerCase().includes(query)) return true;
+      // Search in creator name
+      if (baseName && baseName.toLowerCase().includes(query)) return true;
+      
+      // Search in work experience roles & companies (from base resume)
+      const workExp = baseResume?.resumeData?.workExperience || [];
+      for (const exp of workExp) {
+        if (exp.role && exp.role.toLowerCase().includes(query)) return true;
+        if (exp.company && exp.company.toLowerCase().includes(query)) return true;
+      }
+
+      // Search in skills
+      const skills = baseResume?.resumeData?.skills || [];
+      if (Array.isArray(skills)) {
+        for (const cat of skills) {
+          if (Array.isArray(cat.items)) {
+            for (const skill of cat.items) {
+              if (skill.toLowerCase().includes(query)) return true;
+            }
+          }
+        }
+      }
+
+      // Search in matched keywords from analytics
+      if (r.analytics?.matchedKeywords) {
+        for (const kw of r.analytics.matchedKeywords) {
+          if (kw.toLowerCase().includes(query)) return true;
+        }
+      }
+      
+      return false;
+    }
+    return true;
+  });
+
+  const chunks = [];
+  for (let i = 0; i < filteredGenerated.length; i += 4) {
+    chunks.push(filteredGenerated.slice(i, i + 4));
+  }
+
+  useEffect(() => {
+    if (deckIndex >= chunks.length && chunks.length > 0) {
+      setDeckIndex(chunks.length - 1);
+    } else if (chunks.length === 0) {
+      setDeckIndex(0);
+    }
+  }, [chunks.length, deckIndex]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (chunks.length <= 1) return;
+      if (e.key === 'ArrowRight') {
+        if (deckIndex < chunks.length - 1) {
+          setSwipeDirection(1);
+          setDeckIndex(prev => prev + 1);
+        }
+      } else if (e.key === 'ArrowLeft') {
+        if (deckIndex > 0) {
+          setSwipeDirection(-1);
+          setDeckIndex(prev => prev - 1);
+        }
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [deckIndex, chunks.length]);
+
+  const paginate = (newDirection) => {
+    if (newDirection === 1 && deckIndex < chunks.length - 1) {
+      setSwipeDirection(1);
+      setDeckIndex(deckIndex + 1);
+    } else if (newDirection === -1 && deckIndex > 0) {
+      setSwipeDirection(-1);
+      setDeckIndex(deckIndex - 1);
+    }
+  };
+
   if (loading) {
     return <div className="loading-overlay"><div className="loading-pulse" /><p>Loading your workspace...</p></div>;
   }
@@ -367,33 +440,40 @@ export default function Dashboard() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       const name = r.resumeData?.personalInfo?.fullName || '';
-      return name.toLowerCase().includes(query);
-    }
-    return true;
-  });
+      if (name.toLowerCase().includes(query)) return true;
+      
+      // Search in roles and companies
+      const workExp = r.resumeData?.workExperience || [];
+      for (const exp of workExp) {
+        if (exp.role && exp.role.toLowerCase().includes(query)) return true;
+        if (exp.company && exp.company.toLowerCase().includes(query)) return true;
+      }
 
-  const filteredGenerated = generated.filter((r) => {
-    if (selectedBaseId && r.baseResumeId !== selectedBaseId) return false;
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const baseCandidate = baseResumes.find(b => b.id === r.baseResumeId)?.resumeData?.personalInfo?.fullName || '';
-      return (
-        (r.summary && r.summary.toLowerCase().includes(query)) ||
-        (baseCandidate && baseCandidate.toLowerCase().includes(query))
-      );
+      // Search in skills
+      const skills = r.resumeData?.skills || [];
+      if (Array.isArray(skills)) {
+        for (const cat of skills) {
+          if (Array.isArray(cat.items)) {
+            for (const skill of cat.items) {
+              if (skill.toLowerCase().includes(query)) return true;
+            }
+          }
+        }
+      }
+
+      return false;
     }
     return true;
   });
 
   const visibleBase = filteredBase.slice(0, baseLimit);
-  const visibleGenerated = filteredGenerated.slice(0, generatedLimit);
 
   return (
     <div className="page fade-in" style={{ paddingBottom: '140px' }}>
       {/* Hero */}
-      <div className="glass ambient-glow mb-8 flex flex-col items-center justify-center text-center" style={{ padding: '2rem 1.5rem', borderRadius: '1.25rem' }}>
+      <div className="glass ambient-glow mb-8 flex flex-col items-center justify-center text-center dashboard-hero">
         <h1 className="display-sm mb-3">Welcome back, {user?.email?.split('@')[0]} 👋</h1>
-        <p className="body-lg text-muted mb-6" style={{ maxWidth: '600px' }}>
+        <p className="body-lg text-muted mb-6 dashboard-hero-subtitle">
           {hasContent 
             ? "Manage your resumes and generate AI-tailored variations optimized for applicant tracking systems." 
             : "Your AI tailoring workspace is ready. Upload a resume to get started."}
@@ -407,31 +487,29 @@ export default function Dashboard() {
       {hasContent && (
         <div className="stats-carousel">
           
-          <div className="glass ambient-glow flex flex-col justify-between items-center text-center" style={{ padding: '1.5rem', borderRadius: '1rem' }}>
+          <div className="glass ambient-glow flex flex-col justify-between items-center text-center dashboard-stat-card">
             <div className="label-md text-muted mb-4">Original Resumes</div>
-            <div className="display-sm" style={{ color: 'var(--primary)' }}>{baseResumes.length}</div>
+            <div className="display-sm stat-value-primary">{baseResumes.length}</div>
           </div>
           
-          <div className="glass ambient-glow flex flex-col justify-between items-center text-center" style={{ padding: '1.5rem', borderRadius: '1rem' }}>
+          <div className="glass ambient-glow flex flex-col justify-between items-center text-center dashboard-stat-card">
             <div className="label-md text-muted mb-4">Tailored Versions</div>
-            <div className="display-sm" style={{ color: 'var(--tertiary)' }}>{generated.length}</div>
+            <div className="display-sm stat-value-tertiary">{generated.length}</div>
           </div>
           
-          <div className="glass ambient-glow flex flex-col items-center text-center" style={{ padding: '1.5rem', borderRadius: '1rem' }}>
+          <div className="glass ambient-glow flex flex-col items-center text-center dashboard-stat-card">
             <div className="label-md text-muted mb-4">Avg. ATS Score</div>
             <div className="flex items-center gap-3">
-              <div className="display-sm" style={{
-                color: avgAts ? (avgAts >= 75 ? 'var(--success)' : avgAts >= 50 ? 'var(--warning)' : 'var(--error)') : 'var(--outline)'
-              }}>
+              <div className={`display-sm ${avgAts ? (avgAts >= 75 ? 'stat-value-success' : avgAts >= 50 ? 'text-warning' : 'text-error') : 'text-muted'}`}>
                 {avgAts ? `${avgAts}%` : 'N/A'}
               </div>
               {avgAts && <ScoreRing score={avgAts} size={32} strokeWidth={3} showValue={false} />}
             </div>
           </div>
           
-          <div className="glass ambient-glow flex flex-col justify-between items-center text-center" style={{ padding: '1.5rem', borderRadius: '1rem' }}>
+          <div className="glass ambient-glow flex flex-col justify-between items-center text-center dashboard-stat-card">
             <div className="label-md text-muted mb-4">PDFs Generated</div>
-            <div className="display-sm" style={{ color: 'var(--success)' }}>
+            <div className="display-sm stat-value-success">
               {generated.filter(r => r.pdfUrl).length}
             </div>
           </div>
@@ -440,8 +518,8 @@ export default function Dashboard() {
       )}
 
       {!hasContent ? (
-        <div className="card card-elevated text-center" style={{ padding: 'var(--space-16)' }}>
-          <div style={{ marginBottom: 'var(--space-4)', color: 'var(--primary)', opacity: 0.6 }}>
+        <div className="card card-elevated text-center empty-state-large">
+          <div className="mb-4 text-primary opacity-60">
             <HiOutlineDocumentAdd size={64} />
           </div>
           <h2 className="display-sm mb-4">No resumes yet</h2>
@@ -462,9 +540,9 @@ export default function Dashboard() {
                 {visibleBase.map((r) => (
                   <div 
                     key={r.id} 
-                    className={`compact-base-card slide-up ${selectedBaseId === r.id ? 'active' : ''}`}
+                    className={`compact-base-card slide-up ${selectedBaseId === r.id ? 'selected' : ''}`}
                     onClick={() => setSelectedBaseId(selectedBaseId === r.id ? null : r.id)}
-                    style={{ cursor: 'pointer', transition: 'all 0.2s', border: selectedBaseId === r.id ? '1px solid var(--primary)' : '1px solid transparent', backgroundColor: selectedBaseId === r.id ? 'var(--surface-container-high)' : undefined }}
+                    style={{ cursor: 'pointer' }}
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div style={{ maxWidth: '80%' }}>
@@ -477,10 +555,10 @@ export default function Dashboard() {
                       ]} />
                     </div>
                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                      <button className="btn btn-sm btn-secondary" style={{ flex: 1, padding: '4px' }} onClick={() => navigate(`/editor/${r.id}`)}>
+                      <button className="btn btn-sm btn-secondary card-btn" onClick={() => navigate(`/editor/${r.id}`)}>
                         <HiOutlinePencilAlt /> Edit
                       </button>
-                      <button className="btn btn-sm btn-primary" style={{ flex: 1, padding: '4px' }} onClick={() => navigate(`/tailor/${r.id}`)}>
+                      <button className="btn btn-sm btn-primary card-btn" onClick={() => navigate(`/tailor/${r.id}`)}>
                         <HiOutlineSparkles /> Tailor
                       </button>
                     </div>
@@ -499,7 +577,7 @@ export default function Dashboard() {
                 )}
               </div>
             ) : (
-                <div className="text-muted text-sm" style={{ padding: 'var(--space-4)', background: 'var(--surface-container-low)', borderRadius: 'var(--radius-md)' }}>
+                <div className="text-muted text-sm empty-state">
                   {baseResumes.length === 0 ? 'No original resumes.' : 'No matches found.'}
                 </div>
             )}
@@ -533,60 +611,133 @@ export default function Dashboard() {
 
             {filteredGenerated.length > 0 ? (
               <>
-                <div className="grid-cards" style={{ gap: '1.5rem' }}>
-                  {visibleGenerated.map((r) => (
-                    <div key={r.id} className={`glass slide-up ${!r.pdfUrl ? 'pulse-glow' : 'ambient-glow'}`} style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', height: '100%' }}>
-                      {/* Card Header */}
-                      <div className="flex justify-between items-start">
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div className="title-md" style={{ marginBottom: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {r.summary || 'Tailored Resume'}
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', color: 'var(--on-surface-variant)' }}>
-                            <span style={{ color: 'var(--primary)', opacity: 0.7 }}>↳</span>
-                            <span>{baseResumes.find(b => b.id === r.baseResumeId)?.resumeData?.personalInfo?.fullName || 'Base Resume'}</span>
-                            <span style={{ opacity: 0.35 }}>·</span>
-                            <span style={{ opacity: 0.5 }}>{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ''}</span>
-                          </div>
-                        </div>
-                        <OverflowMenu items={[
-                          { icon: <HiOutlineEye />, label: 'Preview', onClick: () => navigate(`/preview/${r.id}?type=generated`) },
-                          ...(r.pdfUrl ? [{ icon: <HiOutlineDownload />, label: 'Download', onClick: () => window.open(r.pdfUrl, '_blank') }] : []),
-                          { icon: <HiOutlineTrash />, label: deleting === r.id ? 'Deleting…' : 'Delete', onClick: () => handleDeleteGenerated(r.id), danger: true, disabled: deleting === r.id },
-                        ]} />
-                      </div>
+                <div className="deck-container">
+                  <AnimatePresence mode="popLayout" initial={false} custom={swipeDirection}>
+                    <motion.div
+                      key={deckIndex}
+                      custom={swipeDirection}
+                      variants={{
+                        enter: (direction) => ({
+                          x: direction > 0 ? 800 : -800,
+                          opacity: 0,
+                          scale: 0.95
+                        }),
+                        center: {
+                          zIndex: 1,
+                          x: 0,
+                          opacity: 1,
+                          scale: 1
+                        },
+                        exit: (direction) => ({
+                          zIndex: 0,
+                          x: direction < 0 ? 800 : -800,
+                          opacity: 0,
+                          scale: 0.95
+                        })
+                      }}
+                      initial="enter"
+                      animate="center"
+                      exit="exit"
+                      transition={{
+                        x: { type: "spring", stiffness: 300, damping: 30 },
+                        opacity: { duration: 0.2 },
+                        scale: { duration: 0.2 }
+                      }}
+                      drag="x"
+                      dragConstraints={{ left: 0, right: 0 }}
+                      dragElastic={0.1}
+                      onDragEnd={(e, { offset, velocity }) => {
+                        const swipe = Math.abs(offset.x) * velocity.x;
+                        const threshold = 10000;
+                        if (swipe < -threshold || offset.x < -100) {
+                          paginate(1);
+                        } else if (swipe > threshold || offset.x > 100) {
+                          paginate(-1);
+                        }
+                      }}
+                      className="w-full"
+                    >
+                      <div className="deck-grid">
+                        {chunks[deckIndex]?.map((r) => (
+                          <div key={r.id} className={`glass deck-card ${!r.pdfUrl ? 'pulse-glow' : 'ambient-glow'}`}>
+                            {/* Card Header */}
+                            <div className="flex justify-between items-start">
+                              <div className="flex-1">
+                                <div className="title-md deck-card-title">
+                                  {r.summary || 'Tailored Resume'}
+                                </div>
+                                <div className="deck-card-meta">
+                                  <span className="meta-arrow">↳</span>
+                                  <span>{baseResumes.find(b => b.id === r.baseResumeId)?.resumeData?.personalInfo?.fullName || 'Base Resume'}</span>
+                                  <span className="meta-dot">·</span>
+                                  <span className="meta-date">{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : ''}</span>
+                                </div>
+                              </div>
+                              <OverflowMenu items={[
+                                { icon: <HiOutlineEye />, label: 'Preview', onClick: () => navigate(`/preview/${r.id}?type=generated`) },
+                                ...(r.pdfUrl ? [{ icon: <HiOutlineDownload />, label: 'Download', onClick: () => window.open(r.pdfUrl, '_blank') }] : []),
+                                { icon: <HiOutlineTrash />, label: deleting === r.id ? 'Deleting…' : 'Delete', onClick: () => handleDeleteGenerated(r.id), danger: true, disabled: deleting === r.id },
+                              ]} />
+                            </div>
 
-                      {/* Analytics */}
-                      <AnalyticsStrip analytics={r.analytics} />
+                            {/* Analytics */}
+                            <AnalyticsStrip analytics={r.analytics} />
 
-                      {/* Actions */}
-                      <div className="flex gap-2 justify-end" style={{ marginTop: '12px' }}>
-                        <button className="btn btn-sm btn-secondary" onClick={() => navigate(`/preview/${r.id}?type=generated`)}>
-                          <HiOutlineEye /> Preview
-                        </button>
-                        {r.pdfUrl && (
-                          <a href={r.pdfUrl} download className="btn btn-sm btn-primary">
-                            <HiOutlineDownload /> Download
-                          </a>
-                        )}
+                            {/* Actions */}
+                            <div className="flex gap-2 justify-end deck-card-actions">
+                              <button className="btn btn-sm btn-secondary" onClick={() => navigate(`/preview/${r.id}?type=generated`)}>
+                                <HiOutlineEye /> Preview
+                              </button>
+                              {r.pdfUrl && (
+                                <a href={r.pdfUrl} download className="btn btn-sm btn-primary">
+                                  <HiOutlineDownload /> Download
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                  ))}
+                    </motion.div>
+                  </AnimatePresence>
                 </div>
                 
-                {generatedLimit < filteredGenerated.length && (
-                  <div className="show-more-wrapper">
+                {chunks.length > 1 && (
+                  <div className="deck-navigation flex justify-center items-center gap-4 mt-6">
                     <button 
-                      className="btn-show-more" 
-                      onClick={() => setGeneratedLimit(prev => prev + 4)}
+                      className="btn btn-icon btn-secondary deck-nav-btn" 
+                      onClick={() => paginate(-1)} 
+                      disabled={deckIndex === 0}
                     >
-                      <span>Show More</span> <HiOutlineChevronDown size={22} className="show-more-icon" />
+                      <HiOutlineArrowLeft size={20} />
+                    </button>
+                    
+                    <div className="pagination-dots flex items-center gap-2">
+                      {chunks.map((_, idx) => (
+                        <button
+                          key={idx}
+                          className={`pagination-dot ${deckIndex === idx ? 'active' : ''}`}
+                          onClick={() => {
+                            setSwipeDirection(idx > deckIndex ? 1 : -1);
+                            setDeckIndex(idx);
+                          }}
+                          aria-label={`Go to page ${idx + 1}`}
+                        />
+                      ))}
+                      <span className="deck-page-indicator">{deckIndex + 1} / {chunks.length}</span>
+                    </div>
+
+                    <button 
+                      className="btn btn-icon btn-secondary deck-nav-btn" 
+                      onClick={() => paginate(1)} 
+                      disabled={deckIndex === chunks.length - 1}
+                    >
+                      <HiOutlineArrowRight size={20} />
                     </button>
                   </div>
                 )}
               </>
             ) : (
-                <div className="text-muted" style={{ padding: 'var(--space-8)', background: 'var(--surface-container-low)', borderRadius: 'var(--radius-lg)', textAlign: 'center' }}>
+                <div className="text-muted empty-state">
                   {generated.length === 0 ? 'No tailored resumes yet. Click "Tailor" on an original resume to create one.' : 'No tailored resumes match your filters.'}
                 </div>
             )}

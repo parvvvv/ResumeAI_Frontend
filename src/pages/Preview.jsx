@@ -32,16 +32,16 @@ export default function Preview() {
   };
 
   return (
-    <div className="page fade-in">
+    <div className="page fade-in preview-page">
       <h1 className="display-sm mb-2">Generate PDF</h1>
-      <p className="body-lg mb-6">Choose a template and generate your PDF resume.</p>
+      <p className="body-lg mb-6 text-muted">Choose a template and generate a downloadable PDF resume.</p>
 
       {error && <div className="alert alert-error mb-4">{error}</div>}
 
       {/* Template Selection */}
       <div className="mb-6">
         <div className="label-md mb-4">Select Template</div>
-        <div className="flex gap-4 stack-mobile">
+        <div className="template-selection-grid">
           <TemplateCard
             name="modern"
             label="Modern"
@@ -52,14 +52,14 @@ export default function Preview() {
           <TemplateCard
             name="ats"
             label="ATS-Friendly"
-            description="Minimal serif layout, optimized for ATS"
+            description="Minimal serif layout, optimized for ATS parsing"
             selected={template === 'ats'}
             onClick={() => setTemplate('ats')}
           />
         </div>
       </div>
 
-      <button className="btn btn-primary btn-lg btn-lg-mobile" onClick={handleGenerate} disabled={submitting}>
+      <button className="btn btn-primary btn-lg btn-lg-mobile w-full" onClick={handleGenerate} disabled={submitting}>
         {submitting ? (
           <><span className="spinner" /> Submitting...</>
         ) : (
@@ -73,24 +73,24 @@ export default function Preview() {
 function TemplateCard({ name, label, description, selected, onClick }) {
   return (
     <div
-      className={`card card-hover ${selected ? 'ambient-glow-active' : ''}`}
+      className={`card card-hover template-card ${selected ? 'selected ambient-glow-active' : ''}`}
       onClick={onClick}
-      style={{
-        cursor: 'pointer',
-        flex: 1,
-        border: selected ? '1px solid rgba(133, 173, 255, 0.4)' : '1px solid transparent',
-        maxWidth: '300px',
-      }}
     >
+      {/* Mini preview thumbnail */}
+      <div className={`template-card-preview ${name}`}>
+        <div className="preview-bar header" />
+        <div className="preview-bar" style={{ width: '70%' }} />
+        <div className="preview-bar" style={{ width: '90%' }} />
+        <div className="preview-bar" style={{ width: '55%' }} />
+        <div className="preview-bar" style={{ width: '80%' }} />
+        <div className="preview-bar" style={{ width: '40%' }} />
+      </div>
+      
       <div className="flex items-center gap-3 mb-2">
-        <div style={{
-          width: 16, height: 16, borderRadius: '50%',
-          border: `2px solid ${selected ? 'var(--primary)' : 'var(--outline)'}`,
-          background: selected ? 'var(--primary)' : 'transparent',
-        }} />
+        <div className={`template-radio ${selected ? 'selected' : ''}`} />
         <span className="title-md">{label}</span>
       </div>
-      <p className="text-muted" style={{ fontSize: '0.85rem' }}>{description}</p>
+      <p className="text-muted text-sm">{description}</p>
     </div>
   );
 }

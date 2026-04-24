@@ -76,11 +76,11 @@ export default function Editor() {
   const { personalInfo, workExperience = [], skills = [], projects = [], education = [] } = data;
 
   return (
-    <div className="page fade-in" style={{ maxWidth: '900px' }}>
+    <div className="page fade-in editor-page">
       <div className="flex justify-between items-center mb-6 stack-mobile">
         <h1 className="display-sm">Edit Resume</h1>
         <div className="flex gap-3 items-center stack-mobile">
-          {message && <span className={message.includes('Failed') ? 'text-error' : 'text-success'} style={{ fontSize: '0.85rem' }}>{message}</span>}
+          {message && <span className={`editor-save-msg ${message.includes('Failed') ? 'text-error' : 'text-success'}`}>{message}</span>}
           <div className="flex gap-2">
             <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
               {saving ? <span className="spinner" /> : <><HiOutlineSave /> Save</>}
@@ -132,8 +132,7 @@ export default function Editor() {
           <div key={i} className="card mb-4 slide-up" style={{ animationDelay: `${i * 0.05}s` }}>
             <div className="flex justify-between items-center mb-4">
               <input 
-                className="input title-md" 
-                style={{ background: 'transparent', border: 'none', padding: 0, outline: 'none', fontWeight: 600, maxWidth: '60%' }} 
+                className="input title-md editor-skill-name-input" 
                 value={skillCat.name} 
                 onChange={e => updateField(`skills.${i}.name`, e.target.value)} 
                 placeholder="Category Name" 

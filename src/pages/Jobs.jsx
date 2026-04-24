@@ -232,13 +232,12 @@ function JobCard({ job, layout, onTailorClick, isTailoring, isTailored }) {
         {job.is_remote && <span className="job-type-chip job-chip-remote">Remote</span>}
       </div>
 
-      <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.05)', marginTop: 'auto', paddingTop: '16px', display: 'flex', width: '100%', gap: '8px' }}>
+      <div className="job-card-actions">
         <button
-          className={`btn btn-sm ${isTailored ? 'btn-success' : 'btn-secondary'}`}
+          className={`btn btn-sm btn-tailor ${isTailored ? 'btn-success' : 'btn-secondary'}`}
           onClick={() => onTailorClick(job)}
           disabled={isTailoring || isTailored}
           title={isTailored ? "Already tailored" : "Tailor your resume for this job"}
-          style={{ flex: '0 0 auto' }}
         >
           <HiOutlineSparkles />
         </button>
@@ -246,8 +245,7 @@ function JobCard({ job, layout, onTailorClick, isTailoring, isTailored }) {
           href={job.apply_link}
           target="_blank"
           rel="noopener noreferrer"
-          className="btn btn-sm job-apply-btn"
-          style={{ flex: 1, justifyContent: 'center' }}
+          className="btn btn-sm job-apply-btn btn-apply"
         >
           Apply Now <HiOutlineExternalLink />
         </a>
