@@ -41,7 +41,7 @@ export default function Preview() {
       {/* Template Selection */}
       <div className="mb-6">
         <div className="label-md mb-4">Select Template</div>
-        <div className="template-selection-grid">
+        <div className="flex gap-4 stack-mobile">
           <TemplateCard
             name="modern"
             label="Modern"
