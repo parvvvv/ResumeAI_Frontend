@@ -1120,6 +1120,10 @@ textarea.input {
   .btn-lg-mobile {
     width: 100% !important;
   }
+
+  .mobile-nav-safe-area {
+    padding-bottom: 120px !important; 
+  }
 }
 
 /* ═══════════════════════════════════════════════════

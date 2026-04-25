@@ -26,7 +26,7 @@ export default function Login() {
       <div className="auth-card glass">
         <div className="auth-logo">
           <Logo size={64} className="mb-4" />
-          <h1>ElevateCV</h1>
+          <h1>Hirecraft</h1>
           <p>AI-powered career acceleration</p>
         </div>
 

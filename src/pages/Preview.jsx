@@ -32,7 +32,7 @@ export default function Preview() {
   };
 
   return (
-    <div className="page fade-in preview-page">
+    <div className="page fade-in preview-page mobile-nav-safe-area">
       <h1 className="display-sm mb-2">Generate PDF</h1>
       <p className="body-lg mb-6 text-muted">Choose a template and generate a downloadable PDF resume.</p>
 

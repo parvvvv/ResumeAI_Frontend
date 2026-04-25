@@ -170,7 +170,7 @@ export default function Navbar() {
         {!isSearchActive && (
           <Link to="/dashboard" className="navbar-brand" style={{ textDecoration: 'none' }}>
             <Logo size={28} />
-            ElevateCV
+            Hirecraft
           </Link>
         )}
 

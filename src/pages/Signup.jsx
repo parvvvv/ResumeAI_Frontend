@@ -37,7 +37,7 @@ export default function Signup() {
       <div className="auth-card glass">
         <div className="auth-logo">
           <Logo size={64} className="mb-4" />
-          <h1>ElevateCV</h1>
+          <h1>Hirecraft</h1>
           <p>Join to tailor your resume instantly</p>
         </div>
 
