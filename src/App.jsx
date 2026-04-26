@@ -18,6 +18,10 @@ import Tailor from './pages/Tailor';
 import Preview from './pages/Preview';
 import Jobs from './pages/Jobs';
 import AdminDashboard from './pages/AdminDashboard';
+import Templates from './pages/Templates';
+import TemplateEditor from './pages/TemplateEditor';
+import SharedTemplate from './pages/SharedTemplate';
+import { canAccessTemplatePlatform } from './lib/templatePlatform';
 import './index.css';
 
 const MotionDiv = motion.div;
@@ -31,6 +35,12 @@ function AdminRoute({ children }) {
   const { isAuthenticated, user } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   return user?.role === 'admin' ? children : <Navigate to="/dashboard" replace />;
+}
+
+function TemplatePlatformRoute({ children }) {
+  const { isAuthenticated, user } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  return canAccessTemplatePlatform(user) ? children : <Navigate to="/dashboard" replace />;
 }
 
 function AppRoutes() {
@@ -79,6 +89,9 @@ function AppRoutes() {
               <Route path="/preview/:resumeId" element={<ProtectedRoute><Preview /></ProtectedRoute>} />
               <Route path="/jobs" element={<ProtectedRoute><Jobs /></ProtectedRoute>} />
               <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+              <Route path="/templates" element={<TemplatePlatformRoute><Templates /></TemplatePlatformRoute>} />
+              <Route path="/templates/share/:token" element={<ProtectedRoute><SharedTemplate /></ProtectedRoute>} />
+              <Route path="/templates/:templateId" element={<TemplatePlatformRoute><TemplateEditor /></TemplatePlatformRoute>} />
 
               {/* Default */}
               <Route path="*" element={<Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />} />

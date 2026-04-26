@@ -6,6 +6,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { HiOutlineUpload, HiOutlineViewGrid, HiOutlineLogout, HiOutlineSearch, HiOutlineBriefcase, HiX, HiOutlineTag, HiOutlineUser, HiOutlineOfficeBuilding, HiOutlineShieldCheck } from 'react-icons/hi';
 import { useSearch } from '../context/SearchContext';
 import Logo from './Logo';
+import { canAccessTemplatePlatform } from '../lib/templatePlatform';
 
 export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -30,6 +31,7 @@ export default function Navbar() {
   // Get resume data for recommendations
   const { baseResumes = [], generatedResumes: genResumes = [] } = useResumes();
   const generatedResumes = genResumes;
+  const canUseTemplates = canAccessTemplatePlatform(user);
 
   // Handle global shortcut (Cmd+K / Ctrl+K)
   useEffect(() => {
@@ -184,9 +186,12 @@ export default function Navbar() {
     if (user?.role === 'admin') {
       items.push({ path: '/admin', label: 'Admin', icon: <HiOutlineShieldCheck /> });
     }
+    if (canUseTemplates) {
+      items.push({ path: '/templates', label: 'Templates', icon: <HiOutlineTag /> });
+    }
 
     return items;
-  }, [status, statusColor, user?.role]);
+  }, [canUseTemplates, status, statusColor, user?.role]);
 
   const activeNavIndex = mobileNavItems.findIndex((item) => item.path === location.pathname);
 
@@ -461,6 +466,11 @@ export default function Navbar() {
           <Link to="/dashboard" className={`btn btn-sm btn-secondary hide-on-mobile ${location.pathname === '/dashboard' ? 'active' : ''}`}>
             <HiOutlineViewGrid /> <span>Home</span>
           </Link>
+          {canUseTemplates && (
+            <Link to="/templates" className={`btn btn-sm btn-secondary hide-on-mobile ${location.pathname.startsWith('/templates') ? 'active' : ''}`}>
+              <HiOutlineTag /> <span>Templates</span>
+            </Link>
+          )}
           {user?.role === 'admin' && (
             <Link to="/admin" className={`btn btn-sm btn-secondary hide-on-mobile ${location.pathname === '/admin' ? 'active' : ''}`}>
               <HiOutlineShieldCheck /> <span>Admin</span>

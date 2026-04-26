@@ -58,6 +58,7 @@ export default function AdminDashboard() {
   const [overview, setOverview] = useState(null);
   const [activity, setActivity] = useState(null);
   const [users, setUsers] = useState([]);
+  const [pendingTemplates, setPendingTemplates] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, pages: 0, total: 0, limit: 20 });
   const [range, setRange] = useState('30d');
   const [search, setSearch] = useState('');
@@ -69,15 +70,17 @@ export default function AdminDashboard() {
     setLoading(true);
     setError('');
     try {
-      const [overviewRes, activityRes, usersRes] = await Promise.all([
+      const [overviewRes, activityRes, usersRes, templatesRes] = await Promise.all([
         api.get('/admin/overview'),
         api.get('/admin/activity', { params: { range } }),
         api.get('/admin/users', { params: { page: nextPage, limit: 20, search, sort } }),
+        api.get('/admin/templates', { params: { status: 'pending_review' } }).catch(() => ({ data: { templates: [] } })),
       ]);
 
       setOverview(overviewRes.data);
       setActivity(activityRes.data);
       setUsers(usersRes.data.users || []);
+      setPendingTemplates(templatesRes.data?.templates || []);
       setPagination(usersRes.data.pagination || { page: nextPage, pages: 0, total: 0, limit: 20 });
     } catch (err) {
       console.error('Failed to load admin dashboard:', err);
@@ -90,6 +93,16 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchAdminData(1);
   }, [fetchAdminData]);
+
+  const handleTemplateAction = async (templateId, action, reason = '') => {
+    try {
+      const endpoint = `/admin/templates/${templateId}/${action}`;
+      await api.post(endpoint, { reason });
+      fetchAdminData(pagination.page); // Refresh data
+    } catch (err) {
+      setError(err.response?.data?.detail || `Failed to ${action} template.`);
+    }
+  };
 
   const totals = overview?.totals || {};
   const recent = overview?.recent || {};
@@ -151,6 +164,55 @@ export default function AdminDashboard() {
             <ActivityBars title="PDFs completed" data={activity.pdfsCompleted || []} />
           </ResponsiveCardList>
         )}
+      </div>
+
+      <div className="admin-section">
+        <div className="admin-section-header">
+          <div>
+            <h2 className="title-md">Template Governance</h2>
+            <p className="text-muted">Review templates submitted for the public catalog.</p>
+          </div>
+        </div>
+        <div className="admin-table-wrap">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Description</th>
+                <th>Author ID</th>
+                <th>Submitted</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendingTemplates.map(template => (
+                <tr key={template.id}>
+                  <td data-label="Title">{template.title}</td>
+                  <td data-label="Description" style={{ maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {template.description}
+                  </td>
+                  <td data-label="Author ID">{template.ownerUserId}</td>
+                  <td data-label="Submitted">{formatDate(template.updatedAt || template.createdAt)}</td>
+                  <td data-label="Actions">
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button className="btn btn-sm btn-primary" onClick={() => handleTemplateAction(template.id, 'approve')}>
+                        Approve
+                      </button>
+                      <button className="btn btn-sm btn-danger" onClick={() => handleTemplateAction(template.id, 'reject', 'Does not meet guidelines.')}>
+                        Reject
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {pendingTemplates.length === 0 && (
+                <tr>
+                  <td colSpan="5" className="admin-empty-cell">No templates pending review.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div className="admin-section">
