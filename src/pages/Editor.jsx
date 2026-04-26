@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { HiOutlineSave, HiOutlineSparkles, HiOutlineTrash, HiOutlinePlus, HiOutlineX } from 'react-icons/hi';
 import api from '../api/client';
+import { useResumes } from '../context/ResumeContext';
 import { ActionBar, PageShell, SectionHeader } from '../components/ui';
 
 export default function Editor() {
   const { resumeId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const { fetchResumes } = useResumes();
   const [data, setData] = useState(location.state?.resumeData || null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -63,8 +65,9 @@ export default function Editor() {
     setMessage('');
     try {
       await api.put(`/resume/${resumeId}`, data);
+      await fetchResumes(true); // Update global state
       setMessage('Saved successfully!');
-      setTimeout(() => setMessage(''), 3000);
+      setTimeout(() => navigate('/dashboard'), 800); // Small delay to show success before redirect
     } catch {
       setMessage('Failed to save.');
     } finally {

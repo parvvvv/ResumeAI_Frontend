@@ -24,7 +24,7 @@ export default function Preview() {
         templateName: template,
         isGenerated,
       });
-      addToast('PDF generating — we\'ll notify you when ready.', 'info', 4000);
+      addToast('PDF generating - we\'ll notify you when ready.', 'info', 4000);
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to start PDF generation.');

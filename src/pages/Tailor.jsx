@@ -29,7 +29,7 @@ export default function Tailor() {
     startTailorStream(resumeId, jobDescription.trim());
 
     // Show toast and navigate immediately
-    addToast('Tailoring in progress — we\'ll notify you when it\'s ready!', 'info', 5000);
+    addToast('Tailoring in progress - we\'ll notify you when it\'s ready!', 'info', 5000);
     navigate('/dashboard');
   };
 
@@ -49,7 +49,7 @@ export default function Tailor() {
         <textarea
           className="input tailor-textarea w-full"
           rows={10}
-          placeholder="Paste the full job description here — include responsibilities, requirements, and preferred qualifications for best results..."
+          placeholder="Paste the full job description here - include responsibilities, requirements, and preferred qualifications for best results..."
           value={jobDescription}
           onChange={(e) => setJobDescription(e.target.value)}
         />

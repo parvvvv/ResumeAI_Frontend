@@ -129,7 +129,7 @@ const ChatbotPanel = () => {
 
   const handleClose = useCallback(() => {
     setIsOpen(false);
-    // Never set isPinned on close — always show the FAB
+    // Never set isPinned on close - always show the FAB
   }, []);
 
   const panelVariants = {

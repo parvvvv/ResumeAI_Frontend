@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { HiOutlineCloudUpload, HiOutlineDocumentText } from 'react-icons/hi';
 import api from '../api/client';
 import { useNotificationEvents } from '../context/NotificationContext';
+import { useResumes } from '../context/ResumeContext';
 import { PageShell, SectionHeader } from '../components/ui';
 
 export default function Upload() {
@@ -12,6 +13,7 @@ export default function Upload() {
   const fileRef = useRef(null);
   const navigate = useNavigate();
   const { parseProgress, setParseProgress } = useNotificationEvents();
+  const { fetchResumes } = useResumes();
 
   const handleFile = async (file) => {
     if (!file) return;
@@ -35,6 +37,7 @@ export default function Upload() {
       const res = await api.post('/resume/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+      await fetchResumes(true); // Update global state
       setParseProgress(null);
       navigate(`/editor/${res.data.id}`, { state: { resumeData: res.data.resumeData } });
     } catch (err) {

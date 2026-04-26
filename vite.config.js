@@ -20,7 +20,7 @@ export default defineConfig({
       '/api/notifications/stream': {
         target,
         changeOrigin: true,
-        // Disable buffering for SSE — critical for real-time events
+        // Disable buffering for SSE - critical for real-time events
         configure: (proxy) => {
           proxy.on('proxyRes', (proxyRes) => {
             proxyRes.headers['X-Accel-Buffering'] = 'no';

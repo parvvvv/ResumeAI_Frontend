@@ -63,7 +63,7 @@ export default function Navbar() {
     return () => cancelAnimationFrame(frame);
   }, [location.pathname, setIsSearchOpen]);
 
-  // Handle click outside — close panel but KEEP the search query
+  // Handle click outside - close panel but KEEP the search query
   useEffect(() => {
     if (!isSearchOpen && !isSearchActive) return;
     const handleClick = (e) => {
@@ -71,7 +71,7 @@ export default function Navbar() {
       if (searchContainerRef.current && searchContainerRef.current.contains(e.target)) {
         return;
       }
-      // Click is outside — close the panel overlay, but preserve query
+      // Click is outside - close the panel overlay, but preserve query
       setIsSearchOpen(false);
       // On mobile, also collapse the search bar if clicking outside navbar
       if (!e.target.closest('.navbar')) {
@@ -144,7 +144,7 @@ export default function Navbar() {
     setIsSearchOpen(false);
   };
 
-  // Clear everything — only used by the explicit X button
+  // Clear everything - only used by the explicit X button
   const handleClearSearch = () => {
     setSearchQuery('');
     setIsSearchOpen(false);
@@ -304,7 +304,7 @@ export default function Navbar() {
 
   return (
     <>
-      {/* Blur Overlay when search panel is open — clicking it just closes the panel */}
+      {/* Blur Overlay when search panel is open - clicking it just closes the panel */}
       {isSearchOpen && (
         <div 
           className="search-blur-overlay" 

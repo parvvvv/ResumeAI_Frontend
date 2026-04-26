@@ -7,7 +7,7 @@ import api from '../api/client';
 const JobsContext = createContext(null);
 
 /**
- * JobsProvider — manages job recommendations state globally.
+ * JobsProvider - manages job recommendations state globally.
  * Exposes: jobs, profile, status, fetchJobs, tailorForJob, baseResumes.
  *
  * Status values:

@@ -1,6 +1,6 @@
 /**
- * TopProgressBar — a thin, full-width Stripe/Linear-style progress bar
- * that sits above the navbar. Receives a `progress` prop (0–100).
+ * TopProgressBar - a thin, full-width Stripe/Linear-style progress bar
+ * that sits above the navbar. Receives a `progress` prop (0-100).
  * When progress is null/undefined the bar is hidden entirely.
  */
 import { useEffect, useState } from 'react';
@@ -9,7 +9,7 @@ export default function TopProgressBar({ progress }) {
   const [visible, setVisible] = useState(false);
   const [displayProgress, setDisplayProgress] = useState(0);
 
-  // Control visibility — show when progress is active, hide after 100%
+  // Control visibility - show when progress is active, hide after 100%
   useEffect(() => {
     if (progress == null) {
       setVisible(false);

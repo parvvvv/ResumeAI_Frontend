@@ -15,7 +15,7 @@ import { useToast } from '../context/ToastContext';
 import { useResumes } from '../context/ResumeContext';
 import { useSearch } from '../context/SearchContext';
 import { useNotificationEvents } from '../context/NotificationContext';
-import { EmptyState, MetricStrip, PageShell, SectionHeader } from '../components/ui';
+import { EmptyState, MetricStrip, PageShell, SectionHeader, Tooltip } from '../components/ui';
 
 const MotionDiv = motion.div;
 
@@ -115,25 +115,46 @@ function AnalyticsStrip({ analytics }) {
   const scoreColor = analytics.atsScore >= 75 ? 'var(--success)' : analytics.atsScore >= 50 ? 'var(--warning)' : 'var(--error)';
   const simColor = analytics.similarityToOriginal >= 60 ? 'var(--primary)' : 'var(--warning)';
 
+  const getScoreLabel = (score) => {
+    if (score >= 86) return 'Exceptional';
+    if (score >= 76) return 'Excellent';
+    if (score >= 61) return 'Strong';
+    if (score >= 41) return 'Moderate';
+    return 'Weak';
+  };
+
   return (
-    <div>
+      <div>
       <div className="analytics-strip">
-        <div className="analytics-chip">
-          <ScoreRing score={analytics.atsScore} />
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <HiOutlineShieldCheck style={{ color: scoreColor, fontSize: '0.85rem' }} />
-            <span className="chip-value" style={{ color: scoreColor }}>{analytics.atsScore}%</span>
-          </span>
-        </div>
-        <div className="analytics-chip">
-          <HiOutlineSwitchHorizontal style={{ color: simColor, fontSize: '0.85rem' }} />
-          <span className="chip-value" style={{ color: simColor }}>{analytics.similarityToOriginal}%</span>
-        </div>
-        {analytics.matchedKeywords?.length > 0 && (
+        <Tooltip
+          content="ATS Compatibility Score - How well your resume matches this job description based on skills, experience, keywords, and role alignment. Higher is better."
+        >
           <div className="analytics-chip">
-            <HiOutlineTag style={{ color: 'var(--tertiary)', fontSize: '0.85rem' }} />
-            <span className="chip-value">{analytics.matchedKeywords.length}</span>
+            <ScoreRing score={analytics.atsScore} />
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <HiOutlineShieldCheck style={{ color: scoreColor, fontSize: '0.85rem' }} />
+              <span className="chip-value" style={{ color: scoreColor }}>{analytics.atsScore}%</span>
+              <span className="chip-label-badge">{getScoreLabel(analytics.atsScore)}</span>
+            </span>
           </div>
+        </Tooltip>
+        <Tooltip
+          content="Similarity to Original - How much of your original resume content was preserved. Lower means more was rewritten to match the role."
+        >
+          <div className="analytics-chip">
+            <HiOutlineSwitchHorizontal style={{ color: simColor, fontSize: '0.85rem' }} />
+            <span className="chip-value" style={{ color: simColor }}>{analytics.similarityToOriginal}%</span>
+          </div>
+        </Tooltip>
+        {analytics.matchedKeywords?.length > 0 && (
+          <Tooltip
+            content="Matched Keywords - Number of job description keywords successfully incorporated into your resume."
+          >
+            <div className="analytics-chip">
+              <HiOutlineTag style={{ color: 'var(--tertiary)', fontSize: '0.85rem' }} />
+              <span className="chip-value">{analytics.matchedKeywords.length}</span>
+            </div>
+          </Tooltip>
         )}
         <button
           className="analytics-expand-toggle"
@@ -148,7 +169,13 @@ function AnalyticsStrip({ analytics }) {
           {analytics.keyChanges?.length > 0 && (
             <div style={{ marginBottom: 'var(--space-3)' }}>
               <div className="label-md mb-2" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <HiOutlineLightningBolt style={{ color: 'var(--warning)' }} /> Key Changes
+                <Tooltip
+                  content="Key Changes - The most significant modifications made to your resume during the tailoring process."
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <HiOutlineLightningBolt style={{ color: 'var(--warning)' }} /> Key Changes
+                  </span>
+                </Tooltip>
               </div>
               <ul className="change-list">
                 {analytics.keyChanges.map((c, i) => <li key={i}>{c}</li>)}
@@ -159,7 +186,13 @@ function AnalyticsStrip({ analytics }) {
           {analytics.matchedKeywords?.length > 0 && (
             <div style={{ marginBottom: 'var(--space-3)' }}>
               <div className="label-md mb-2" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <HiOutlineTag style={{ color: 'var(--success)' }} /> Matched Keywords
+                <Tooltip
+                  content="Matched Keywords - JD keywords that are now present in your tailored resume."
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <HiOutlineTag style={{ color: 'var(--success)' }} /> Matched Keywords
+                  </span>
+                </Tooltip>
               </div>
               <div className="keyword-list">
                 {analytics.matchedKeywords.map((kw, i) => (
@@ -172,7 +205,13 @@ function AnalyticsStrip({ analytics }) {
           {analytics.missingKeywords?.length > 0 && (
             <div>
               <div className="label-md mb-2" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <HiOutlineTag style={{ color: 'var(--error)' }} /> Missing Keywords
+                <Tooltip
+                  content="Missing Keywords - Important JD keywords that couldn't be naturally incorporated. Consider adding these manually."
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <HiOutlineTag style={{ color: 'var(--error)' }} /> Missing Keywords
+                  </span>
+                </Tooltip>
               </div>
               <div className="keyword-list">
                 {analytics.missingKeywords.map((kw, i) => (
@@ -235,7 +274,7 @@ function OverflowMenu({ items }) {
 
 /* ─── Confirm Modal ─── */
 function ConfirmModal({ isOpen, title, message, onConfirm, onCancel, confirmLabel = 'Delete', isLoading = false }) {
-  // Close on Escape key — hook must be called before any early return
+  // Close on Escape key - hook must be called before any early return
   useEffect(() => {
     if (!isOpen) return;
     const handleEsc = (e) => { if (e.key === 'Escape') onCancel(); };
@@ -272,9 +311,14 @@ export default function Dashboard() {
     loading: contextLoading, 
     hasInitialFetch,
     deleteBase,
-    deleteGenerated 
+    deleteGenerated,
+    fetchResumes
   } = useResumes();
   const { processingJobs } = useNotificationEvents();
+
+  useEffect(() => {
+    fetchResumes(true); // Silent refresh on mount
+  }, [fetchResumes]);
   
   const [deleting, setDeleting] = useState(null);
   const [selectedBaseId, setSelectedBaseId] = useState(null);
@@ -601,7 +645,7 @@ export default function Dashboard() {
               )}
             </div>
 
-            {/* Processing cards — one per active tailoring job */}
+            {/* Processing cards - one per active tailoring job */}
             {activeProcessingEntries.map(([baseResumeId, job]) => (
               <ProcessingCard
                 key={baseResumeId}
@@ -658,8 +702,9 @@ export default function Dashboard() {
                         }
                       }}
                       className="w-full"
+                      style={{ overflow: 'visible' }}
                     >
-                      <div className="deck-grid">
+                      <div className="deck-grid" style={{ overflow: 'visible' }}>
                         {chunks[deckIndex]?.map((r) => (
                           <div key={r.id} className={`glass deck-card tailored-card ${!r.pdfUrl ? 'pulse-glow' : 'ambient-glow'}`}>
                             <div className="flex justify-between items-start">

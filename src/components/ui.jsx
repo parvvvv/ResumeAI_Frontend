@@ -1,3 +1,6 @@
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+
 export function PageShell({ children, className = '', wide = false, mobileSafe = true }) {
   return (
     <main className={`page app-page-shell fade-in ${wide ? 'page-wide' : ''} ${mobileSafe ? 'mobile-nav-safe-area' : ''} ${className}`}>
@@ -91,5 +94,141 @@ export function ResponsiveCardList({ children, className = '', as = 'div' }) {
     <Element className={`responsive-card-list ${className}`}>
       {children}
     </Element>
+  );
+}
+
+export function Tooltip({ content, children, className = '', preferredPlacement = 'top' }) {
+  const triggerRef = useRef(null);
+  const bubbleRef = useRef(null);
+  const [open, setOpen] = useState(false);
+  const [isTouchLike, setIsTouchLike] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mediaQuery = window.matchMedia('(hover: none), (pointer: coarse)');
+    const syncTouchMode = () => setIsTouchLike(mediaQuery.matches);
+
+    syncTouchMode();
+    mediaQuery.addEventListener?.('change', syncTouchMode);
+    return () => mediaQuery.removeEventListener?.('change', syncTouchMode);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handlePointerDown = (event) => {
+      if (triggerRef.current?.contains(event.target)) return;
+      if (bubbleRef.current?.contains(event.target)) return;
+      setOpen(false);
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [open]);
+
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current || !bubbleRef.current || typeof window === 'undefined') return;
+
+    const triggerRect = triggerRef.current.getBoundingClientRect();
+    const bubbleRect = bubbleRef.current.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const margin = 12;
+    const arrowSize = 10;
+    const roomAbove = triggerRect.top;
+    const roomBelow = viewportHeight - triggerRect.bottom;
+    const nextPlacement =
+      preferredPlacement === 'top'
+        ? roomAbove >= bubbleRect.height + arrowSize + margin || roomAbove > roomBelow
+          ? 'top'
+          : 'bottom'
+        : roomBelow >= bubbleRect.height + arrowSize + margin || roomBelow > roomAbove
+          ? 'bottom'
+          : 'top';
+
+    const centeredLeft = triggerRect.left + triggerRect.width / 2 - bubbleRect.width / 2;
+    const clampedLeft = Math.min(
+      viewportWidth - bubbleRect.width - margin,
+      Math.max(margin, centeredLeft),
+    );
+    const top =
+      nextPlacement === 'top'
+        ? Math.max(margin, triggerRect.top - bubbleRect.height - arrowSize)
+        : Math.min(viewportHeight - bubbleRect.height - margin, triggerRect.bottom + arrowSize);
+
+    const arrowLeft = Math.min(
+      bubbleRect.width - 18,
+      Math.max(18, triggerRect.left + triggerRect.width / 2 - clampedLeft),
+    );
+
+    bubbleRef.current.dataset.placement = nextPlacement;
+    bubbleRef.current.style.left = `${clampedLeft}px`;
+    bubbleRef.current.style.top = `${top}px`;
+    bubbleRef.current.style.setProperty('--tooltip-arrow-left', `${arrowLeft}px`);
+  }, [open, preferredPlacement, content]);
+
+  const handlePointerEnter = () => {
+    if (!isTouchLike) setOpen(true);
+  };
+
+  const handlePointerLeave = () => {
+    if (!isTouchLike) setOpen(false);
+  };
+
+  const handleClick = (event) => {
+    if (!isTouchLike) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setOpen((value) => !value);
+  };
+
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      setOpen((value) => !value);
+    }
+  };
+
+  return (
+    <>
+      <span
+        ref={triggerRef}
+        className={`tooltip-trigger ${open ? 'is-open' : ''} ${className}`}
+        role="button"
+        tabIndex={0}
+        aria-expanded={open}
+        aria-describedby={open ? 'app-tooltip' : undefined}
+        onPointerEnter={handlePointerEnter}
+        onPointerLeave={handlePointerLeave}
+        onFocus={() => setOpen(true)}
+        onBlur={() => {
+          if (!isTouchLike) setOpen(false);
+        }}
+        onClick={handleClick}
+        onKeyDown={handleKeyDown}
+      >
+        {children}
+      </span>
+      {open && typeof document !== 'undefined' && createPortal(
+        <div
+          id="app-tooltip"
+          ref={bubbleRef}
+          className="tooltip-bubble"
+          data-placement={preferredPlacement}
+          role="tooltip"
+        >
+          {content}
+        </div>,
+        document.body,
+      )}
+    </>
   );
 }

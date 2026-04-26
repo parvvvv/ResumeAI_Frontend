@@ -5,7 +5,7 @@ import { useToast } from './ToastContext';
 const NotificationContext = createContext(null);
 
 /**
- * NotificationProvider — manages the SSE connection for general notifications
+ * NotificationProvider - manages the SSE connection for general notifications
  * and provides startTailorStream() for streaming tailor progress directly from
  * the /api/resume/tailor endpoint.
  */
@@ -51,7 +51,7 @@ export function NotificationProvider({ children }) {
       [baseResumeId]: { percent: 5, stage: 0, message: 'Starting AI tailoring...' },
     }));
 
-    // Fire-and-forget — the promise keeps running after navigation
+    // Fire-and-forget - the promise keeps running after navigation
     (async () => {
       try {
         const response = await fetch('/api/resume/tailor', {

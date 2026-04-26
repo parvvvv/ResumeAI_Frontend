@@ -1,4 +1,4 @@
-# ResumeAI ✨ — Frontend (v2.0)
+# ResumeAI ✨ - Frontend (v2.0)
 
 The immersive, interactive interface of ResumeAI. Built with a focus on high-fidelity aesthetics, real-time feedback, and production-grade performance.
 
@@ -7,7 +7,7 @@ The immersive, interactive interface of ResumeAI. Built with a focus on high-fid
 ## 🏗️ Architecture & UX Design
 
 ### 🎨 Kinetic Architecture
-ResumeAI implements **Kinetic Architecture**—a custom CSS design system focused on depth, light, and motion.
+ResumeAI implements **Kinetic Architecture**-a custom CSS design system focused on depth, light, and motion.
 - **Micro-interactions**: Every button and card utilizes `pulse-glow` and `hover-lift` effects for tactile feedback.
 - **Glassmorphism**: 100% borderless UI that relies on `backdrop-filter: blur(12px)` and tonal elevation for hierarchy.
 - **Fluid Layouts**: Purely responsive engine that adapts from ultra-wide monitors to mobile screens without layout shifts.
