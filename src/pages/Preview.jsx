@@ -59,7 +59,7 @@ export default function Preview() {
     const fetchSession = async () => {
       setSessionLoading(true);
       try {
-        const res = await api.get(`/resume/templates/${selectedId}/session`, {
+        const res = await api.get(`/templates/${selectedId}/session`, {
           params: { resumeId }
         });
         if (!cancelled) {
@@ -90,7 +90,7 @@ export default function Preview() {
     try {
       // If there are dynamic fields, save the session first
       if (templateFields.length > 0) {
-        await api.put(`/resume/templates/${selectedId}/session?resumeId=${resumeId}`, {
+        await api.put(`/templates/${selectedId}/session?resumeId=${resumeId}`, {
           extras: sessionExtras
         });
       }
