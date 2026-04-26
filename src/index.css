@@ -699,6 +699,26 @@ textarea.input {
   margin-bottom: var(--space-6);
 }
 
+.mb-8 {
+  margin-bottom: var(--space-8);
+}
+
+.mb-10 {
+  margin-bottom: var(--space-10);
+}
+
+.mb-12 {
+  margin-bottom: var(--space-12);
+}
+
+.mt-10 {
+  margin-top: var(--space-10);
+}
+
+.mt-12 {
+  margin-top: var(--space-12);
+}
+
 .flex-1 {
   flex: 1;
   min-width: 0;

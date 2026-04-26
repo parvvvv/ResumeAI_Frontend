@@ -492,9 +492,6 @@ export default function Dashboard() {
         description="Start with an original resume, tailor it for a role, then preview and download the strongest version."
         actions={(
           <>
-            <button className="btn btn-secondary" onClick={() => navigate('/upload')}>
-              <HiOutlineUpload size={18} /> Upload
-            </button>
             {nextActionResume && (
               <button className="btn btn-primary" onClick={() => navigate(`/tailor/${nextActionResume.id}`)}>
                 <HiOutlineSparkles size={18} /> Tailor resume
@@ -502,9 +499,10 @@ export default function Dashboard() {
             )}
           </>
         )}
+        className="mb-10"
       />
 
-      <MetricStrip items={metrics} className="dashboard-summary-grid" />
+      <MetricStrip items={metrics} className="dashboard-summary-grid mb-12" />
 
       {!hasContent ? (
         <EmptyState
