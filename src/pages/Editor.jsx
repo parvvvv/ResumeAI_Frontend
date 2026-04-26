@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { HiOutlineSave, HiOutlineSparkles, HiOutlineTrash, HiOutlinePlus, HiOutlineX } from 'react-icons/hi';
 import api from '../api/client';
+import { ActionBar, PageShell, SectionHeader } from '../components/ui';
 
 export default function Editor() {
   const { resumeId } = useParams();
@@ -15,7 +16,7 @@ export default function Editor() {
     if (!data && resumeId) {
       api.get(`/resume/${resumeId}`).then(res => setData(res.data.resumeData)).catch(() => navigate('/dashboard'));
     }
-  }, [resumeId]);
+  }, [data, navigate, resumeId]);
 
   const updateField = (path, value) => {
     setData(prev => {
@@ -64,7 +65,7 @@ export default function Editor() {
       await api.put(`/resume/${resumeId}`, data);
       setMessage('Saved successfully!');
       setTimeout(() => setMessage(''), 3000);
-    } catch (err) {
+    } catch {
       setMessage('Failed to save.');
     } finally {
       setSaving(false);
@@ -76,21 +77,21 @@ export default function Editor() {
   const { personalInfo, workExperience = [], skills = [], projects = [], education = [] } = data;
 
   return (
-    <div className="page fade-in editor-page">
-      <div className="flex justify-between items-center mb-6 stack-mobile">
-        <h1 className="display-sm">Edit Resume</h1>
-        <div className="flex gap-3 items-center stack-mobile">
-          {message && <span className={`editor-save-msg ${message.includes('Failed') ? 'text-error' : 'text-success'}`}>{message}</span>}
-          <div className="flex gap-2">
-            <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-              {saving ? <span className="spinner" /> : <><HiOutlineSave /> Save</>}
-            </button>
-            <button className="btn btn-secondary" onClick={() => navigate(`/tailor/${resumeId}`)}>
-              <HiOutlineSparkles /> Tailor
-            </button>
-          </div>
-        </div>
-      </div>
+    <PageShell className="editor-page">
+      <SectionHeader
+        title="Edit Resume"
+        description="Review parsed resume content, fix details, and keep your source resume ready for tailoring."
+      />
+
+      <ActionBar sticky className="editor-action-bar">
+        {message && <span className={`editor-save-msg ${message.includes('Failed') ? 'text-error' : 'text-success'}`}>{message}</span>}
+        <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+          {saving ? <span className="spinner" /> : <><HiOutlineSave /> Save</>}
+        </button>
+        <button className="btn btn-secondary" onClick={() => navigate(`/tailor/${resumeId}`)}>
+          <HiOutlineSparkles /> Tailor
+        </button>
+      </ActionBar>
 
       {/* Personal Info */}
       <Section title="Personal Info">
@@ -185,7 +186,7 @@ export default function Editor() {
           </div>
         ))}
       </Section>
-    </div>
+    </PageShell>
   );
 }
 
@@ -193,8 +194,8 @@ export default function Editor() {
 
 function Section({ title, children, onAdd }) {
   return (
-    <div className="mb-6">
-      <div className="flex justify-between items-center mb-4">
+    <section className="editor-section">
+      <div className="editor-section-header">
         <h2 className="title-lg text-primary">{title}</h2>
         {onAdd && (
           <button className="btn btn-sm btn-secondary" onClick={onAdd}>
@@ -203,13 +204,13 @@ function Section({ title, children, onAdd }) {
         )}
       </div>
       {children}
-    </div>
+    </section>
   );
 }
 
 function Field({ label, value, onChange }) {
   return (
-    <div className="input-group" style={{ marginBottom: '0.75rem' }}>
+    <div className="input-group editor-field">
       <label>{label}</label>
       <input className="input" value={value || ''} onChange={e => onChange(e.target.value)} placeholder={label} />
     </div>
@@ -218,16 +219,16 @@ function Field({ label, value, onChange }) {
 
 function ArrayField({ label, items = [], path, updateField, addItem, removeItem }) {
   return (
-    <div style={{ marginBottom: '0.75rem' }}>
-      <div className="flex justify-between items-center mb-2">
+    <div className="editor-array-field">
+      <div className="editor-array-header">
         <label className="label-md">{label}</label>
         <button className="btn btn-sm btn-secondary" onClick={() => addItem(path)}>
           <HiOutlinePlus /> Add
         </button>
       </div>
       {items.map((item, i) => (
-        <div key={i} className="flex gap-2 mb-2">
-          <input className="input" value={item} onChange={e => updateField(`${path}.${i}`, e.target.value)} style={{ flex: 1 }} />
+        <div key={i} className="editor-array-row">
+          <input className="input" value={item} onChange={e => updateField(`${path}.${i}`, e.target.value)} />
           <button className="btn btn-icon btn-danger" onClick={() => removeItem(path, i)}>
             <HiOutlineX />
           </button>
@@ -239,7 +240,7 @@ function ArrayField({ label, items = [], path, updateField, addItem, removeItem 
 
 function TagField({ label, value, onChange }) {
   return (
-    <div className="input-group" style={{ marginBottom: '0.75rem' }}>
+    <div className="input-group editor-field">
       <label>{label} <span className="text-muted" style={{ fontWeight: 400 }}>(comma-separated)</span></label>
       <input className="input" value={value} onChange={e => onChange(e.target.value)} placeholder="React, Node.js, Python" />
     </div>

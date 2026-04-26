@@ -3,6 +3,7 @@ import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { HiOutlineDocumentText } from 'react-icons/hi';
 import api from '../api/client';
 import { useToast } from '../context/ToastContext';
+import { ActionBar, PageShell, ResponsiveCardList, SectionHeader } from '../components/ui';
 
 export default function Preview() {
   const { resumeId } = useParams();
@@ -32,16 +33,19 @@ export default function Preview() {
   };
 
   return (
-    <div className="page fade-in preview-page mobile-nav-safe-area">
-      <h1 className="display-sm mb-2">Generate PDF</h1>
-      <p className="body-lg mb-6 text-muted">Choose a template and generate a downloadable PDF resume.</p>
+    <PageShell className="preview-page">
+      <SectionHeader
+        title="Generate PDF"
+        description="Choose a template and generate a downloadable PDF resume."
+        icon={<HiOutlineDocumentText />}
+      />
 
       {error && <div className="alert alert-error mb-4">{error}</div>}
 
       {/* Template Selection */}
       <div className="mb-6">
         <div className="label-md mb-4">Select Template</div>
-        <div className="flex gap-4 stack-mobile">
+        <ResponsiveCardList className="template-selection-grid">
           <TemplateCard
             name="modern"
             label="Modern"
@@ -56,17 +60,19 @@ export default function Preview() {
             selected={template === 'ats'}
             onClick={() => setTemplate('ats')}
           />
-        </div>
+        </ResponsiveCardList>
       </div>
 
-      <button className="btn btn-primary btn-lg btn-lg-mobile w-full" onClick={handleGenerate} disabled={submitting}>
-        {submitting ? (
-          <><span className="spinner" /> Submitting...</>
-        ) : (
-          <><HiOutlineDocumentText /> Generate PDF</>
-        )}
-      </button>
-    </div>
+      <ActionBar sticky>
+        <button className="btn btn-primary btn-lg w-full" onClick={handleGenerate} disabled={submitting}>
+          {submitting ? (
+            <><span className="spinner" /> Submitting...</>
+          ) : (
+            <><HiOutlineDocumentText /> Generate PDF</>
+          )}
+        </button>
+      </ActionBar>
+    </PageShell>
   );
 }
 
@@ -75,6 +81,15 @@ function TemplateCard({ name, label, description, selected, onClick }) {
     <div
       className={`card card-hover template-card ${selected ? 'selected ambient-glow-active' : ''}`}
       onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClick();
+        }
+      }}
+      aria-pressed={selected}
     >
       {/* Mini preview thumbnail */}
       <div className={`template-card-preview ${name}`}>

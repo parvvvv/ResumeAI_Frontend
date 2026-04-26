@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { HiOutlineSparkles, HiOutlineLightningBolt, HiOutlineClipboardList, HiOutlineShieldCheck } from 'react-icons/hi';
 import { useToast } from '../context/ToastContext';
 import { useNotificationEvents } from '../context/NotificationContext';
+import { ActionBar, PageShell, SectionHeader } from '../components/ui';
 
 export default function Tailor() {
   const { resumeId } = useParams();
@@ -33,17 +34,12 @@ export default function Tailor() {
   };
 
   return (
-    <div className="page fade-in tailor-page">
-      {/* Header with icon */}
-      <div className="flex items-start gap-4 mb-6">
-        <div className="tailor-header-icon">
-          <HiOutlineSparkles />
-        </div>
-        <div>
-          <h1 className="display-sm mb-1">Tailor Resume</h1>
-          <p className="body-lg text-muted">Paste a job description and our AI will optimize your resume for maximum ATS compatibility.</p>
-        </div>
-      </div>
+    <PageShell className="tailor-page">
+      <SectionHeader
+        title="Tailor Resume"
+        description="Paste a job description and our AI will optimize your resume for maximum ATS compatibility."
+        icon={<HiOutlineSparkles />}
+      />
 
       {error && <div className="alert alert-error mb-4">{error}</div>}
 
@@ -62,17 +58,19 @@ export default function Tailor() {
         </div>
       </div>
 
-      <button
-        className="btn btn-primary btn-lg btn-lg-mobile w-full"
-        onClick={handleTailor}
-        disabled={submitting || isProcessing}
-      >
-        {submitting || isProcessing ? (
-          <><span className="spinner" /> {isProcessing ? 'Already tailoring...' : 'Submitting...'}</>
-        ) : (
-          <><HiOutlineSparkles /> Tailor My Resume</>
-        )}
-      </button>
+      <ActionBar sticky className="tailor-action-bar">
+        <button
+          className="btn btn-primary btn-lg w-full"
+          onClick={handleTailor}
+          disabled={submitting || isProcessing}
+        >
+          {submitting || isProcessing ? (
+            <><span className="spinner" /> {isProcessing ? 'Already tailoring...' : 'Submitting...'}</>
+          ) : (
+            <><HiOutlineSparkles /> Tailor My Resume</>
+          )}
+        </button>
+      </ActionBar>
 
       {/* Tips Section */}
       <div className="tailor-tips">
@@ -104,6 +102,6 @@ export default function Tailor() {
           </div>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

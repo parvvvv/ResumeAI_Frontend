@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -10,12 +10,14 @@ import {
   HiOutlineLightningBolt, HiOutlineTag,
   HiOutlineArrowLeft, HiOutlineArrowRight
 } from 'react-icons/hi';
-import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useResumes } from '../context/ResumeContext';
 import { useSearch } from '../context/SearchContext';
 import { useNotificationEvents } from '../context/NotificationContext';
+import { EmptyState, MetricStrip, PageShell, SectionHeader } from '../components/ui';
+
+const MotionDiv = motion.div;
 
 /* ─── Score Ring Component ─── */
 function ScoreRing({ score, size = 28, strokeWidth = 2.5, showValue = true }) {
@@ -269,7 +271,6 @@ export default function Dashboard() {
     generatedResumes: generated, 
     loading: contextLoading, 
     hasInitialFetch,
-    fetchResumes,
     deleteBase,
     deleteGenerated 
   } = useResumes();
@@ -279,10 +280,9 @@ export default function Dashboard() {
   const [selectedBaseId, setSelectedBaseId] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ open: false, title: '', message: '', onConfirm: null });
   const [baseLimit, setBaseLimit] = useState(4);
-  
   const [deckIndex, setDeckIndex] = useState(0);
   const [swipeDirection, setSwipeDirection] = useState(0);
-
+  
   const navigate = useNavigate();
   const { user } = useAuth();
   const { addToast } = useToast();
@@ -337,7 +337,7 @@ export default function Dashboard() {
     });
   };
 
-  // ── Compute chunks and apply hooks before any early returns ──
+  // ── Apply filters before any early returns ──
   const filteredGenerated = generated.filter((r) => {
     if (selectedBaseId && r.baseResumeId !== selectedBaseId) return false;
     if (searchQuery) {
@@ -395,18 +395,20 @@ export default function Dashboard() {
   }, [chunks.length, deckIndex]);
 
   useEffect(() => {
+    setDeckIndex(0);
+    setSwipeDirection(0);
+  }, [selectedBaseId, searchQuery]);
+
+  useEffect(() => {
     const handleKeyDown = (e) => {
       if (chunks.length <= 1) return;
-      if (e.key === 'ArrowRight') {
-        if (deckIndex < chunks.length - 1) {
-          setSwipeDirection(1);
-          setDeckIndex(prev => prev + 1);
-        }
-      } else if (e.key === 'ArrowLeft') {
-        if (deckIndex > 0) {
-          setSwipeDirection(-1);
-          setDeckIndex(prev => prev - 1);
-        }
+      if (e.key === 'ArrowRight' && deckIndex < chunks.length - 1) {
+        setSwipeDirection(1);
+        setDeckIndex(prev => prev + 1);
+      }
+      if (e.key === 'ArrowLeft' && deckIndex > 0) {
+        setSwipeDirection(-1);
+        setDeckIndex(prev => prev - 1);
       }
     };
     document.addEventListener('keydown', handleKeyDown);
@@ -467,80 +469,77 @@ export default function Dashboard() {
   });
 
   const visibleBase = filteredBase.slice(0, baseLimit);
+  const selectedBase = baseResumes.find((resume) => resume.id === selectedBaseId);
+  const activeProcessingEntries = Object.entries(processingJobs);
+  const nextActionResume = selectedBase || baseResumes[0];
+  const metrics = [
+    { label: 'Original resumes', value: baseResumes.length, valueClassName: 'stat-value-primary' },
+    { label: 'Tailored versions', value: generated.length, valueClassName: 'stat-value-tertiary' },
+    {
+      label: 'Avg. ATS score',
+      value: avgAts ? `${avgAts}%` : 'N/A',
+      valueClassName: avgAts ? (avgAts >= 75 ? 'stat-value-success' : avgAts >= 50 ? 'text-warning' : 'text-error') : 'text-muted',
+      accessory: avgAts ? <ScoreRing score={avgAts} size={30} strokeWidth={3} showValue={false} /> : null,
+    },
+    { label: 'PDFs generated', value: generated.filter(r => r.pdfUrl).length, valueClassName: 'stat-value-success' },
+  ];
 
   return (
-    <div className="page fade-in" style={{ paddingBottom: '140px' }}>
-      {/* Hero */}
-      <div className="glass ambient-glow mb-8 flex flex-col items-center justify-center text-center dashboard-hero">
-        <h1 className="display-sm mb-3">Welcome back, {user?.email?.split('@')[0]} 👋</h1>
-        <p className="body-lg text-muted mb-6 dashboard-hero-subtitle">
-          {hasContent 
-            ? "Manage your resumes and generate AI-tailored variations optimized for applicant tracking systems." 
-            : "Your AI tailoring workspace is ready. Upload a resume to get started."}
-        </p>
-        <button className="btn btn-primary btn-lg" onClick={() => navigate('/upload')}>
-          <HiOutlineUpload size={20} /> Upload New Resume
-        </button>
-      </div>
+    <PageShell className="dashboard-page">
+      <SectionHeader
+        eyebrow={`Welcome back, ${user?.email?.split('@')[0]}`}
+        title="Resume workspace"
+        description="Start with an original resume, tailor it for a role, then preview and download the strongest version."
+        actions={(
+          <>
+            <button className="btn btn-secondary" onClick={() => navigate('/upload')}>
+              <HiOutlineUpload size={18} /> Upload
+            </button>
+            {nextActionResume && (
+              <button className="btn btn-primary" onClick={() => navigate(`/tailor/${nextActionResume.id}`)}>
+                <HiOutlineSparkles size={18} /> Tailor resume
+              </button>
+            )}
+          </>
+        )}
+      />
 
-      {/* Quick Stats */}
-      {hasContent && (
-        <div className="stats-carousel">
-          
-          <div className="glass ambient-glow flex flex-col justify-between items-center text-center dashboard-stat-card">
-            <div className="label-md text-muted mb-4">Original Resumes</div>
-            <div className="display-sm stat-value-primary">{baseResumes.length}</div>
-          </div>
-          
-          <div className="glass ambient-glow flex flex-col justify-between items-center text-center dashboard-stat-card">
-            <div className="label-md text-muted mb-4">Tailored Versions</div>
-            <div className="display-sm stat-value-tertiary">{generated.length}</div>
-          </div>
-          
-          <div className="glass ambient-glow flex flex-col items-center text-center dashboard-stat-card">
-            <div className="label-md text-muted mb-4">Avg. ATS Score</div>
-            <div className="flex items-center gap-3">
-              <div className={`display-sm ${avgAts ? (avgAts >= 75 ? 'stat-value-success' : avgAts >= 50 ? 'text-warning' : 'text-error') : 'text-muted'}`}>
-                {avgAts ? `${avgAts}%` : 'N/A'}
-              </div>
-              {avgAts && <ScoreRing score={avgAts} size={32} strokeWidth={3} showValue={false} />}
-            </div>
-          </div>
-          
-          <div className="glass ambient-glow flex flex-col justify-between items-center text-center dashboard-stat-card">
-            <div className="label-md text-muted mb-4">PDFs Generated</div>
-            <div className="display-sm stat-value-success">
-              {generated.filter(r => r.pdfUrl).length}
-            </div>
-          </div>
-          
-        </div>
-      )}
+      <MetricStrip items={metrics} className="dashboard-summary-grid" />
 
       {!hasContent ? (
-        <div className="card card-elevated text-center empty-state-large">
-          <div className="mb-4 text-primary opacity-60">
+        <EmptyState
+          icon={(
             <HiOutlineDocumentAdd size={64} />
-          </div>
-          <h2 className="display-sm mb-4">No resumes yet</h2>
-          <p className="body-lg mb-6">Upload your first resume to get started with AI-powered tailoring.</p>
-          <button className="btn btn-primary btn-lg" onClick={() => navigate('/upload')}>
-            Upload Your First Resume
-          </button>
-        </div>
+          )}
+          title="No resumes yet"
+          description="Upload your first resume to get started with AI-powered tailoring."
+          action={(
+            <button className="btn btn-primary btn-lg" onClick={() => navigate('/upload')}>
+              Upload Your First Resume
+            </button>
+          )}
+        />
       ) : (
-        <div className="dashboard-layout mt-8">
+        <div className="dashboard-flow-layout mt-8">
           {/* Base Resumes */}
-          <div className="base-resumes-sidebar">
-            <h2 className="title-md mb-4 flex items-center gap-2">
-              <span className="text-primary">●</span> Originals
-            </h2>
+          <div className="dashboard-panel originals-panel">
+            <div className="dashboard-section-heading">
+              <div>
+                <h2 className="title-md">Original Resumes</h2>
+                <p className="text-muted">Choose the source resume you want to edit, preview, or tailor.</p>
+              </div>
+              {selectedBaseId && (
+                <button className="btn btn-sm btn-secondary" onClick={() => setSelectedBaseId(null)}>
+                  Show all
+                </button>
+              )}
+            </div>
             {filteredBase.length > 0 ? (
-              <div className="flex flex-col gap-3">
+              <div className="original-resume-list">
                 {visibleBase.map((r) => (
                   <div 
                     key={r.id} 
-                    className={`compact-base-card slide-up ${selectedBaseId === r.id ? 'selected' : ''}`}
+                    className={`compact-base-card original-resume-card slide-up ${selectedBaseId === r.id ? 'selected' : ''}`}
                     onClick={() => setSelectedBaseId(selectedBaseId === r.id ? null : r.id)}
                     style={{ cursor: 'pointer' }}
                   >
@@ -584,11 +583,16 @@ export default function Dashboard() {
           </div>
 
           {/* Generated Resumes */}
-          <div className="tailored-resumes-main">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="display-sm">
-                <span style={{ color: 'var(--tertiary)' }}>●</span> Tailored Resumes
-              </h2>
+          <div className="dashboard-panel tailored-resumes-main">
+            <div className="dashboard-section-heading">
+              <div>
+                <h2 className="title-md">Tailored Resumes</h2>
+                <p className="text-muted">
+                  {selectedBase
+                    ? `Showing versions created from ${selectedBase.resumeData?.personalInfo?.fullName || 'selected resume'}.`
+                    : 'Review generated versions, ATS signals, previews, and downloads.'}
+                </p>
+              </div>
               {(selectedBaseId || searchQuery) && (
                 <button 
                   className="btn btn-sm btn-secondary" 
@@ -600,7 +604,7 @@ export default function Dashboard() {
             </div>
 
             {/* Processing cards — one per active tailoring job */}
-            {Object.entries(processingJobs).map(([baseResumeId, job]) => (
+            {activeProcessingEntries.map(([baseResumeId, job]) => (
               <ProcessingCard
                 key={baseResumeId}
                 baseResumeId={baseResumeId}
@@ -613,7 +617,7 @@ export default function Dashboard() {
               <>
                 <div className="deck-container">
                   <AnimatePresence mode="popLayout" initial={false} custom={swipeDirection}>
-                    <motion.div
+                    <MotionDiv
                       key={deckIndex}
                       custom={swipeDirection}
                       variants={{
@@ -659,8 +663,7 @@ export default function Dashboard() {
                     >
                       <div className="deck-grid">
                         {chunks[deckIndex]?.map((r) => (
-                          <div key={r.id} className={`glass deck-card ${!r.pdfUrl ? 'pulse-glow' : 'ambient-glow'}`}>
-                            {/* Card Header */}
+                          <div key={r.id} className={`glass deck-card tailored-card ${!r.pdfUrl ? 'pulse-glow' : 'ambient-glow'}`}>
                             <div className="flex justify-between items-start">
                               <div className="flex-1">
                                 <div className="title-md deck-card-title">
@@ -680,10 +683,8 @@ export default function Dashboard() {
                               ]} />
                             </div>
 
-                            {/* Analytics */}
                             <AnalyticsStrip analytics={r.analytics} />
 
-                            {/* Actions */}
                             <div className="flex gap-2 justify-end deck-card-actions">
                               <button className="btn btn-sm btn-secondary" onClick={() => navigate(`/preview/${r.id}?type=generated`)}>
                                 <HiOutlineEye /> Preview
@@ -697,10 +698,10 @@ export default function Dashboard() {
                           </div>
                         ))}
                       </div>
-                    </motion.div>
+                    </MotionDiv>
                   </AnimatePresence>
                 </div>
-                
+
                 {chunks.length > 1 && (
                   <div className="deck-navigation flex justify-center items-center gap-4 mt-6">
                     <button 
@@ -754,6 +755,6 @@ export default function Dashboard() {
         onCancel={closeModal}
         isLoading={!!deleting}
       />
-    </div>
+    </PageShell>
   );
 }

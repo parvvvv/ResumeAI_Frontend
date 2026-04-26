@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useJobs } from '../context/JobsContext';
 import { useResumes } from '../context/ResumeContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { HiOutlineUpload, HiOutlineViewGrid, HiOutlineLogout, HiOutlineSearch, HiOutlineBriefcase, HiX, HiOutlineTag, HiOutlineUser, HiOutlineOfficeBuilding } from 'react-icons/hi';
+import { HiOutlineUpload, HiOutlineViewGrid, HiOutlineLogout, HiOutlineSearch, HiOutlineBriefcase, HiX, HiOutlineTag, HiOutlineUser, HiOutlineOfficeBuilding, HiOutlineShieldCheck } from 'react-icons/hi';
 import { useSearch } from '../context/SearchContext';
 import Logo from './Logo';
 
@@ -14,18 +14,22 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isSearchActive, setIsSearchActive] = useState(false);
+  const [isNavDragging, setIsNavDragging] = useState(false);
+  const [navIndicatorStyle, setNavIndicatorStyle] = useState(null);
   const searchInputRef = useRef(null);
   const searchContainerRef = useRef(null);
+  const mobileNavRef = useRef(null);
+  const navDragRef = useRef(null);
+  const mobileItemRefs = useRef([]);
+  const suppressClickRef = useRef(false);
   
-  const [isMac, setIsMac] = useState(true);
+  const [isMac] = useState(() => (
+    typeof navigator !== 'undefined' && navigator.userAgent.toLowerCase().includes('mac')
+  ));
 
   // Get resume data for recommendations
   const { baseResumes = [], generatedResumes: genResumes = [] } = useResumes();
   const generatedResumes = genResumes;
-
-  useEffect(() => {
-    setIsMac(navigator.userAgent.toLowerCase().includes('mac'));
-  }, []);
 
   // Handle global shortcut (Cmd+K / Ctrl+K)
   useEffect(() => {
@@ -48,13 +52,16 @@ export default function Navbar() {
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isSearchOpen]);
+  }, [isSearchOpen, setIsSearchOpen]);
 
   // Close search panel on route change
   useEffect(() => {
-    setIsSearchActive(false);
-    setIsSearchOpen(false);
-  }, [location.pathname]);
+    const frame = requestAnimationFrame(() => {
+      setIsSearchActive(false);
+      setIsSearchOpen(false);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [location.pathname, setIsSearchOpen]);
 
   // Handle click outside — close panel but KEEP the search query
   useEffect(() => {
@@ -73,7 +80,7 @@ export default function Navbar() {
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
-  }, [isSearchOpen, isSearchActive]);
+  }, [isSearchOpen, isSearchActive, setIsSearchOpen]);
 
   // Build recommendation data from resumes
   const recommendations = useMemo(() => {
@@ -144,8 +151,6 @@ export default function Navbar() {
     setIsSearchActive(false);
   };
 
-  if (!isAuthenticated) return null;
-
   const colors = {
     loading: '#f59e0b',
     found: '#10b981',
@@ -154,6 +159,148 @@ export default function Navbar() {
     idle: '#74757d',
   };
   const statusColor = colors[status] || colors.idle;
+
+  const mobileNavItems = useMemo(() => {
+    const items = [
+      { path: '/dashboard', label: 'Home', icon: <HiOutlineViewGrid /> },
+      { path: '/upload', label: 'Upload resume', icon: <HiOutlineUpload />, className: 'mobile-nav-upload' },
+      {
+        path: '/jobs',
+        label: 'Recommended jobs',
+        icon: (
+          <>
+            <span
+              className={`status-dot nav-status-dot ${status === 'loading' || status === 'found' ? 'status-dot-pulse' : ''}`}
+              style={{ '--dot-color': statusColor, top: '4px', left: '10px' }}
+            />
+            <div className="nav-icon-wrapper">
+              <HiOutlineBriefcase />
+            </div>
+          </>
+        ),
+      },
+    ];
+
+    if (user?.role === 'admin') {
+      items.push({ path: '/admin', label: 'Admin', icon: <HiOutlineShieldCheck /> });
+    }
+
+    return items;
+  }, [status, statusColor, user?.role]);
+
+  const activeNavIndex = mobileNavItems.findIndex((item) => item.path === location.pathname);
+
+  useEffect(() => {
+    const syncIndicatorToIndex = (index) => {
+      const navElement = mobileNavRef.current;
+      const itemElement = mobileItemRefs.current[index];
+      if (!navElement || !itemElement) return;
+
+      const navRect = navElement.getBoundingClientRect();
+      const itemRect = itemElement.getBoundingClientRect();
+      setNavIndicatorStyle({
+        width: itemRect.width,
+        height: itemRect.height,
+        x: itemRect.left - navRect.left,
+        y: itemRect.top - navRect.top,
+      });
+    };
+
+    syncIndicatorToIndex(activeNavIndex === -1 ? 0 : activeNavIndex);
+    const handleResize = () => syncIndicatorToIndex(activeNavIndex === -1 ? 0 : activeNavIndex);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [activeNavIndex, mobileNavItems.length]);
+
+  const moveIndicatorToItem = (index) => {
+    const navElement = mobileNavRef.current;
+    const itemElement = mobileItemRefs.current[index];
+    if (!navElement || !itemElement) return;
+
+    const navRect = navElement.getBoundingClientRect();
+    const itemRect = itemElement.getBoundingClientRect();
+    setNavIndicatorStyle({
+      width: itemRect.width,
+      height: itemRect.height,
+      x: itemRect.left - navRect.left,
+      y: itemRect.top - navRect.top,
+    });
+  };
+
+  const getClosestNavIndex = (clientX) => {
+    const distances = mobileItemRefs.current.map((element, index) => {
+      if (!element) return { index, distance: Number.POSITIVE_INFINITY };
+      const rect = element.getBoundingClientRect();
+      return { index, distance: Math.abs(clientX - (rect.left + rect.width / 2)) };
+    });
+
+    distances.sort((left, right) => left.distance - right.distance);
+    return distances[0]?.index ?? activeNavIndex;
+  };
+
+  const resetMobileNavDrag = () => {
+    navDragRef.current = null;
+    setIsNavDragging(false);
+  };
+
+  const handleMobileNavPointerDown = (event) => {
+    if (event.pointerType === 'mouse') return;
+    const activeElement = mobileItemRefs.current[activeNavIndex];
+    if (!activeElement || !activeElement.contains(event.target)) return;
+
+    navDragRef.current = {
+      startX: event.clientX,
+      startY: event.clientY,
+      previewIndex: activeNavIndex,
+    };
+    setIsNavDragging(true);
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  };
+
+  const handleMobileNavPointerMove = (event) => {
+    if (!navDragRef.current) return;
+    const dx = event.clientX - navDragRef.current.startX;
+    const dy = event.clientY - navDragRef.current.startY;
+
+    if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 14) {
+      moveIndicatorToItem(activeNavIndex);
+      resetMobileNavDrag();
+      return;
+    }
+
+    if (Math.abs(dx) < 6) return;
+
+    const previewIndex = getClosestNavIndex(event.clientX);
+    navDragRef.current.previewIndex = previewIndex;
+    moveIndicatorToItem(previewIndex);
+    suppressClickRef.current = true;
+  };
+
+  const handleMobileNavPointerUp = () => {
+    if (!navDragRef.current) return;
+    const previewIndex = navDragRef.current.previewIndex;
+    const nextItem = mobileNavItems[previewIndex];
+    const currentIndex = activeNavIndex === -1 ? 0 : activeNavIndex;
+
+    if (nextItem && previewIndex !== currentIndex) {
+      navigate(nextItem.path, { state: { navDirection: previewIndex > currentIndex ? 1 : -1 } });
+    } else {
+      moveIndicatorToItem(currentIndex);
+    }
+
+    window.setTimeout(() => {
+      suppressClickRef.current = false;
+    }, 220);
+    resetMobileNavDrag();
+  };
+
+  const handleMobileNavClickCapture = (event) => {
+    if (!suppressClickRef.current) return;
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  if (!isAuthenticated) return null;
 
   return (
     <>
@@ -294,7 +441,7 @@ export default function Navbar() {
             setIsSearchActive(true);
             setIsSearchOpen(true);
             setTimeout(() => searchInputRef.current?.focus(), 100);
-          }}>
+          }} aria-label="Open search">
             <HiOutlineSearch />
           </button>
 
@@ -312,14 +459,20 @@ export default function Navbar() {
             <HiOutlineUpload /> <span>Upload</span>
           </Link>
           <Link to="/dashboard" className={`btn btn-sm btn-secondary hide-on-mobile ${location.pathname === '/dashboard' ? 'active' : ''}`}>
-            <HiOutlineViewGrid /> <span>Dashboard</span>
+            <HiOutlineViewGrid /> <span>Home</span>
           </Link>
+          {user?.role === 'admin' && (
+            <Link to="/admin" className={`btn btn-sm btn-secondary hide-on-mobile ${location.pathname === '/admin' ? 'active' : ''}`}>
+              <HiOutlineShieldCheck /> <span>Admin</span>
+            </Link>
+          )}
           <div className="navbar-user">
             <span className="hide-on-mobile">{user?.email?.split('@')[0]}</span>
             <button
               className="btn btn-icon btn-secondary"
               onClick={() => { logout(); navigate('/login'); }}
               title="Logout"
+              aria-label="Logout"
             >
               <HiOutlineLogout /> <span className="hide-on-mobile">Logout</span>
             </button>
@@ -328,24 +481,43 @@ export default function Navbar() {
       </nav>
 
       {/* Mobile Bottom Navigation */}
-      <div className="mobile-bottom-nav">
-        <Link to="/dashboard" className={`mobile-nav-item ${location.pathname === '/dashboard' ? 'active' : ''}`}>
-          <HiOutlineViewGrid />
-        </Link>
-        <div className="mobile-nav-divider"></div>
-        <Link to="/upload" className={`mobile-nav-item mobile-nav-upload ${location.pathname === '/upload' ? 'active' : ''}`}>
-          <HiOutlineUpload />
-        </Link>
-        <div className="mobile-nav-divider"></div>
-        <Link to="/jobs" style={{ position: 'relative' }} className={`mobile-nav-item ${location.pathname === '/jobs' ? 'active' : ''}`}>
-          <span 
-            className={`status-dot nav-status-dot ${status === 'loading' || status === 'found' ? 'status-dot-pulse' : ''}`} 
-            style={{ '--dot-color': statusColor, top: '4px', left: '10px' }} 
+      <div
+        ref={mobileNavRef}
+        className={`mobile-bottom-nav ${isNavDragging ? 'is-dragging' : ''}`}
+        onPointerDown={handleMobileNavPointerDown}
+        onPointerMove={handleMobileNavPointerMove}
+        onPointerUp={handleMobileNavPointerUp}
+        onPointerCancel={resetMobileNavDrag}
+        onClickCapture={handleMobileNavClickCapture}
+      >
+        {navIndicatorStyle && (
+          <span
+            className="mobile-nav-indicator"
+            style={{
+              width: `${navIndicatorStyle.width}px`,
+              height: `${navIndicatorStyle.height}px`,
+              transform: `translate3d(${navIndicatorStyle.x}px, ${navIndicatorStyle.y}px, 0)`,
+            }}
           />
-          <div className="nav-icon-wrapper">
-            <HiOutlineBriefcase />
-          </div>
-        </Link>
+        )}
+        {mobileNavItems.map((item, index) => (
+          <Link
+            key={item.path}
+            ref={(element) => {
+              mobileItemRefs.current[index] = element;
+            }}
+            to={item.path}
+            state={{
+              navDirection: index > (activeNavIndex === -1 ? 0 : activeNavIndex) ? 1 : -1,
+            }}
+            style={{ position: item.path === '/jobs' ? 'relative' : undefined }}
+            className={`mobile-nav-item ${item.className || ''} ${location.pathname === item.path ? 'active' : ''}`}
+            aria-label={item.label}
+            aria-current={location.pathname === item.path ? 'page' : undefined}
+          >
+            {item.icon}
+          </Link>
+        ))}
       </div>
     </>
   );

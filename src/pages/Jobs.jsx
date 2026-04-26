@@ -7,6 +7,7 @@ import {
   HiOutlineDocumentText, HiOutlineX, HiOutlineSparkles
 } from 'react-icons/hi';
 import { useToast } from '../context/ToastContext';
+import { EmptyState, MobileSheet, PageShell, SectionHeader } from '../components/ui';
 
 /* ─── Skeleton Loader ─── */
 function JobSkeleton() {
@@ -42,17 +43,14 @@ function ProfileBadge({ profile }) {
 
 /* ─── Resume Selection Modal ─── */
 function ResumeSelectModal({ isOpen, onClose, resumes, onSelect, jobTitle, isTailoring }) {
-  if (!isOpen) return null;
-
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content glass" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px', textAlign: 'left' }}>
+    <MobileSheet isOpen={isOpen} onClose={onClose} className="resume-select-sheet" labelledBy="resume-select-title">
         <div className="modal-header">
           <div className="flex items-center gap-3">
             <div className="modal-icon-small" style={{ margin: 0, background: 'rgba(133, 173, 255, 0.1)', color: 'var(--primary)' }}>
               <HiOutlineDocumentText />
             </div>
-            <h3 className="display-sm" style={{ fontSize: '1.25rem', marginBottom: 0 }}>Select Base Resume</h3>
+            <h3 id="resume-select-title" className="display-sm sheet-title">Select Base Resume</h3>
           </div>
           <button className="btn btn-icon btn-secondary" onClick={onClose} disabled={isTailoring}>
             <HiOutlineX size={20} />
@@ -103,8 +101,7 @@ function ResumeSelectModal({ isOpen, onClose, resumes, onSelect, jobTitle, isTai
             <span className="body-sm font-medium" style={{ color: 'var(--warning)' }}>Tailoring your resume...</span>
           </div>
         )}
-      </div>
-    </div>
+    </MobileSheet>
   );
 }
 
@@ -291,7 +288,7 @@ export default function Jobs() {
       setSelectedJob(null);
       
       // Provide immediate feedback
-      addToast('Tailoring process started 🚀 You\'ll see the new resume on your dashboard soon.', 'success');
+      addToast('Tailoring process started 🚀 You\'ll see the new resume on Home soon.', 'success');
 
       // Navigate to dashboard immediately so user can see progress (as they requested)
       setTimeout(() => {
@@ -313,39 +310,29 @@ export default function Jobs() {
   };
 
   return (
-    <div className="page jobs-page fade-in" style={{ paddingBottom: '140px' }}>
-      {/* Header section */}
-      <div className="jobs-header glass ambient-glow">
-        <button className="btn btn-icon btn-secondary mb-4" onClick={() => navigate('/dashboard')}>
-          <HiOutlineChevronLeft /> Back to Dashboard
-        </button>
-
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="display-md flex items-center gap-3">
-              <HiOutlineBriefcase className="text-primary" />
-              Recommended Jobs
-              {status === 'loading' && <span className="status-dot status-dot-pulse" style={{ '--dot-color': '#f59e0b' }} />}
-              {status === 'found' && <span className="status-dot" style={{ '--dot-color': '#10b981' }} />}
-            </h1>
-            <p className="body-lg mt-2 text-muted">
-              Auto-tailored to your generated resume summaries.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
+    <PageShell className="jobs-page">
+      <SectionHeader
+        eyebrow="Recommended roles"
+        title="Recommended Jobs"
+        description="Auto-tailored to your generated resume summaries."
+        icon={<HiOutlineBriefcase />}
+        actions={(
+          <>
+            <button className="btn btn-secondary" onClick={() => navigate('/dashboard')}>
+              <HiOutlineChevronLeft /> Home
+            </button>
             {profile && <ProfileBadge profile={profile} />}
             <button
-              className="btn btn-secondary flex items-center gap-2"
+              className="btn btn-secondary"
               onClick={fetchJobs}
               disabled={loading}
             >
               <HiOutlineRefresh className={loading ? 'spin-icon' : ''} />
-              <span className="hide-on-mobile">Refresh</span>
+              Refresh
             </button>
-          </div>
-        </div>
-      </div>
+          </>
+        )}
+      />
 
       {/* Main Content */}
       <div className="mt-8">
@@ -354,18 +341,18 @@ export default function Jobs() {
             {[...Array(6)].map((_, i) => <JobSkeleton key={i} />)}
           </div>
         ) : !hasJobs ? (
-          <div className="card card-elevated text-center py-16">
-            <div className="mb-4 text-primary opacity-60 flex justify-center">
+          <EmptyState
+            icon={(
               <HiOutlineBriefcase size={64} />
-            </div>
-            <h2 className="display-sm mb-4">No recommendations yet</h2>
-            <p className="body-lg mb-6 text-muted max-w-md mx-auto">
-              We need to auto-analyze your tailored resumes to find the perfect matches. Generate a resume to get started!
-            </p>
-            <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>
-              Go to Dashboard
-            </button>
-          </div>
+            )}
+            title="No recommendations yet"
+            description="We need to auto-analyze your tailored resumes to find the perfect matches. Generate a resume to get started."
+            action={(
+              <button className="btn btn-primary" onClick={() => navigate('/dashboard')}>
+                Go to Home
+              </button>
+            )}
+          />
         ) : (
           <>
             {/* Controls */}
@@ -457,6 +444,6 @@ export default function Jobs() {
         jobTitle={selectedJob?.title || 'this job'}
         isTailoring={selectedJob && tailoringStatus[selectedJob.job_id] === 'loading'}
       />
-    </div>
+    </PageShell>
   );
 }

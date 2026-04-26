@@ -3,10 +3,23 @@ import api from '../api/client';
 
 const AuthContext = createContext(null);
 
+function getRoleFromToken() {
+  const token = localStorage.getItem('token');
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.role || null;
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     const stored = localStorage.getItem('user');
-    return stored ? JSON.parse(stored) : null;
+    if (!stored) return null;
+    const parsed = JSON.parse(stored);
+    return { ...parsed, role: parsed.role || getRoleFromToken() || 'user' };
   });
   const [loading, setLoading] = useState(false);
 

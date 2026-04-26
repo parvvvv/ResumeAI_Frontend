@@ -61,7 +61,7 @@ export default function Login() {
             />
           </div>
 
-          <button type="submit" className="btn btn-primary btn-lg" disabled={loading} style={{ width: '100%', marginTop: '0.5rem' }}>
+          <button type="submit" className="btn btn-primary btn-lg auth-submit" disabled={loading}>
             {loading ? <span className="spinner" /> : 'Log In'}
           </button>
         </form>

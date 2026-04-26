@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { HiOutlineCloudUpload, HiOutlineDocumentText } from 'react-icons/hi';
 import api from '../api/client';
 import { useNotificationEvents } from '../context/NotificationContext';
+import { PageShell, SectionHeader } from '../components/ui';
 
 export default function Upload() {
   const [dragging, setDragging] = useState(false);
@@ -54,11 +55,13 @@ export default function Upload() {
   const activePercent = parseProgress?.percent ?? 5;
 
   return (
-    <div className="page fade-in">
-      <div className="mb-6">
-        <h1 className="display-sm">Upload Your Resume</h1>
-        <p className="body-lg mt-2">Upload a PDF and our AI will parse it into structured, editable data.</p>
-      </div>
+    <PageShell className="upload-page">
+      <SectionHeader
+        eyebrow="New resume"
+        title="Upload your resume"
+        description="Upload a PDF and our AI will parse it into structured, editable data."
+        icon={<HiOutlineCloudUpload />}
+      />
 
       {error && <div className="alert alert-error mb-4">{error}</div>}
 
@@ -109,6 +112,6 @@ export default function Upload() {
           />
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }
