@@ -1,100 +1,31 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
+import { HiOutlineLockClosed } from 'react-icons/hi';
 import Logo from '../components/Logo';
 
 export default function Signup() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState('');
-  const { signup, loading } = useAuth();
-  const navigate = useNavigate();
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters.');
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.');
-      return;
-    }
-
-    const result = await signup(email, password);
-    if (result.success) {
-      navigate('/dashboard');
-    } else {
-      setError(result.error);
-    }
-  };
-
   return (
-    <div className="auth-page">
+    <div className="auth-page animate-fade-in">
       <div className="auth-card glass">
         <div className="auth-logo">
-          <Logo size={64} className="mb-4" />
+          <Logo size={64} className="mb-4 animate-float" />
           <h1>Hirecraft</h1>
-          <p>Join to tailor your resume instantly</p>
+          <p>AI-powered career acceleration</p>
         </div>
 
-        <form className="auth-form" onSubmit={handleSubmit}>
-          {error && <div className="alert alert-error">{error}</div>}
-
-          <div className="input-group">
-            <label htmlFor="signup-email">Email</label>
-            <input
-              id="signup-email"
-              type="email"
-              className="input"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-            />
+        <div className="text-center py-6 px-4 rounded-2xl glass-subtle border border-warning/10 my-6 animate-pulse-slow">
+          <div className="mx-auto flex items-center justify-center w-12 h-12 rounded-full bg-warning/10 text-warning mb-4">
+            <HiOutlineLockClosed size={24} />
           </div>
+          <h3 className="title-md mb-2" style={{ color: 'var(--warning)' }}>Registration Restricted</h3>
+          <p className="body-sm text-muted leading-relaxed">
+            Self-registration is disabled on this platform. Please contact your system administrator to request an account.
+          </p>
+        </div>
 
-          <div className="input-group">
-            <label htmlFor="signup-password">Password</label>
-            <input
-              id="signup-password"
-              type="password"
-              className="input"
-              placeholder="Min. 8 characters"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-              autoComplete="new-password"
-            />
-          </div>
-
-          <div className="input-group">
-            <label htmlFor="signup-confirm">Confirm Password</label>
-            <input
-              id="signup-confirm"
-              type="password"
-              className="input"
-              placeholder="••••••••"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              autoComplete="new-password"
-            />
-          </div>
-
-          <button type="submit" className="btn btn-primary btn-lg auth-submit" disabled={loading}>
-            {loading ? <span className="spinner" /> : 'Create Account'}
-          </button>
-        </form>
-
-        <div className="auth-footer">
-          Already have an account?{' '}
-          <Link to="/login">Log In</Link>
+        <div className="auth-footer mt-4">
+          <Link to="/login" className="btn btn-secondary w-full justify-center py-3 text-center">
+            Return to Log In
+          </Link>
         </div>
       </div>
     </div>

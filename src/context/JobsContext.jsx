@@ -26,20 +26,25 @@ export function JobsProvider({ children }) {
   const [queryUsed, setQueryUsed] = useState('');
   const [status, setStatus] = useState('idle'); // idle | loading | found | empty | error
   const [tailoringStatus, setTailoringStatus] = useState({}); // { [job_id]: 'loading' | 'success' | 'error' }
+  const [bypassAttemptsLeft, setBypassAttemptsLeft] = useState(null);
   const hasFetchedRef = useRef(false);
 
-  const fetchJobs = useCallback(async () => {
+  const fetchJobs = useCallback(async (bypassCache = false) => {
     setStatus('loading');
     try {
-      const res = await api.get('/jobs/recommendations');
+      const url = bypassCache ? '/jobs/recommendations?bypass_cache=true' : '/jobs/recommendations';
+      const res = await api.get(url);
       const data = res.data;
       setJobs(data.jobs || []);
       setProfile(data.profile || null);
       setQueryUsed(data.query_used || '');
+      setBypassAttemptsLeft(data.bypassAttemptsLeft ?? null);
       setStatus(data.jobs?.length > 0 ? 'found' : 'empty');
+      return data;
     } catch (err) {
       console.error('Failed to fetch job recommendations:', err);
       setStatus('error');
+      throw err;
     }
   }, []);
 
@@ -192,6 +197,7 @@ export function JobsProvider({ children }) {
       status,
       baseResumes,
       tailoringStatus,
+      bypassAttemptsLeft,
       fetchJobs,
       tailorForJob,
     }}>

@@ -66,9 +66,8 @@ export default function Login() {
           </button>
         </form>
 
-        <div className="auth-footer">
-          Don't have an account?{' '}
-          <Link to="/signup">Sign Up</Link>
+        <div className="auth-footer text-muted" style={{ fontSize: '0.8rem' }}>
+          Self-registration is disabled. Contact your admin for access.
         </div>
       </div>
     </div>

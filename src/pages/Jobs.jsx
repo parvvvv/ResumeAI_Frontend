@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useJobs } from '../context/JobsContext';
+import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
   HiOutlineBriefcase, HiOutlineRefresh, HiOutlineExternalLink,
@@ -252,9 +253,26 @@ function JobCard({ job, layout, onTailorClick, isTailoring, isTailored }) {
 }
 
 export default function Jobs() {
-  const { jobs, profile, status, baseResumes, tailoringStatus, fetchJobs, tailorForJob } = useJobs();
+  const { jobs, profile, status, baseResumes, tailoringStatus, fetchJobs, tailorForJob, bypassAttemptsLeft } = useJobs();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const { addToast } = useToast();
+
+  const handleRefreshClick = async () => {
+    try {
+      const data = await fetchJobs(true);
+      if (data?.message) {
+        // Handle smart deduplication or success message from backend
+        addToast(data.message, data.is_duplicate ? 'warning' : 'success');
+      } else {
+        addToast('Recommendations refreshed successfully 🚀', 'success');
+      }
+    } catch (err) {
+      const errorMsg = err.response?.data?.detail || 'Failed to refresh recommendations. Please try again.';
+      addToast(errorMsg, 'error');
+    }
+  };
+
   const [layout, setLayout] = useState('list'); // 'grid' | 'list'
   const [visibleCount, setVisibleCount] = useState(12);
   const [modalOpen, setModalOpen] = useState(false);
@@ -317,20 +335,28 @@ export default function Jobs() {
         description="Auto-tailored to your generated resume summaries."
         icon={<HiOutlineBriefcase />}
         actions={(
-          <>
+          <div className="flex flex-wrap items-center gap-3">
             <button className="btn btn-secondary" onClick={() => navigate('/dashboard')}>
               <HiOutlineChevronLeft /> Home
             </button>
             {profile && <ProfileBadge profile={profile} />}
-            <button
-              className="btn btn-secondary"
-              onClick={fetchJobs}
-              disabled={loading}
-            >
-              <HiOutlineRefresh className={loading ? 'spin-icon' : ''} />
-              Refresh
-            </button>
-          </>
+            <div className="flex items-center gap-2">
+              <button
+                className="btn btn-secondary"
+                onClick={handleRefreshClick}
+                disabled={loading || (bypassAttemptsLeft !== null && bypassAttemptsLeft <= 0 && user?.role !== 'admin')}
+                title="Bypass 24-hour cache to search for fresh recommendations"
+              >
+                <HiOutlineRefresh className={loading ? 'spin-icon' : ''} />
+                Refresh
+              </button>
+              {bypassAttemptsLeft !== null && (
+                <span className="text-xs font-semibold px-3 py-2 rounded-xl bg-secondary/80 text-muted border border-border animate-fade-in">
+                  {bypassAttemptsLeft === 'unlimited' ? '∞ refreshes left' : `${bypassAttemptsLeft}/3 refreshes left`}
+                </span>
+              )}
+            </div>
+          </div>
         )}
       />
 
