@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   HiOutlineBriefcase, HiOutlineRefresh, HiOutlineExternalLink,
   HiOutlineLocationMarker, HiOutlineClock, HiOutlineChevronLeft,
-  HiOutlineDocumentText, HiOutlineX, HiOutlineSparkles
+  HiOutlineDocumentText, HiOutlineX, HiOutlineSparkles, HiOutlineSearch
 } from 'react-icons/hi';
 import { useToast } from '../context/ToastContext';
 import { EmptyState, MobileSheet, PageShell, SectionHeader } from '../components/ui';
@@ -48,7 +48,7 @@ function ResumeSelectModal({ isOpen, onClose, resumes, onSelect, jobTitle, isTai
     <MobileSheet isOpen={isOpen} onClose={onClose} className="resume-select-sheet" labelledBy="resume-select-title">
         <div className="modal-header">
           <div className="flex items-center gap-3">
-            <div className="modal-icon-small" style={{ margin: 0, background: 'rgba(133, 173, 255, 0.1)', color: 'var(--primary)' }}>
+            <div className="modal-icon-small" style={{ margin: 0, background: 'rgb(var(--accent-rgb) / 0.1)', color: 'var(--primary)' }}>
               <HiOutlineDocumentText />
             </div>
             <h3 id="resume-select-title" className="display-sm sheet-title">Select Base Resume</h3>
@@ -277,17 +277,50 @@ export default function Jobs() {
   const [visibleCount, setVisibleCount] = useState(12);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState(null);
+  const [filterText, setFilterText] = useState('');
+  const [sortBy, setSortBy] = useState('relevance'); // relevance | newest | company | title
+  const [remoteOnly, setRemoteOnly] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false); // mobile: collapse sort/remote
 
   const loading = status === 'loading';
   const hasJobs = jobs.length > 0;
 
-  // Pagination logic
-  const visibleJobs = useMemo(() => {
-    return jobs.slice(0, visibleCount);
-  }, [jobs, visibleCount]);
+  // Client-side filter + sort over the recommendations (no API change).
+  const processedJobs = useMemo(() => {
+    const q = filterText.trim().toLowerCase();
+    let list = jobs.filter((job) => {
+      if (remoteOnly && !job.is_remote) return false;
+      if (!q) return true;
+      return [job.title, job.company, job.location]
+        .filter(Boolean)
+        .some((value) => value.toLowerCase().includes(q));
+    });
+    list = [...list];
+    if (sortBy === 'newest') {
+      list.sort((a, b) => new Date(b.posted_at || 0) - new Date(a.posted_at || 0));
+    } else if (sortBy === 'company') {
+      list.sort((a, b) => (a.company || '').localeCompare(b.company || ''));
+    } else if (sortBy === 'title') {
+      list.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+    }
+    return list;
+  }, [jobs, filterText, remoteOnly, sortBy]);
+
+  const visibleJobs = useMemo(
+    () => processedJobs.slice(0, visibleCount),
+    [processedJobs, visibleCount],
+  );
+
+  const hasActiveFilters = filterText.trim() !== '' || remoteOnly || sortBy !== 'relevance';
 
   const handleShowMore = () => {
     setVisibleCount((prev) => prev + (layout === 'grid' ? 6 : 10));
+  };
+
+  const clearFilters = () => {
+    setFilterText('');
+    setRemoteOnly(false);
+    setSortBy('relevance');
   };
 
   const handleTailorClick = (job) => {
@@ -381,10 +414,56 @@ export default function Jobs() {
           />
         ) : (
           <>
+            {/* Filter / sort bar */}
+            <div className={`jobs-filter-bar ${filtersOpen ? 'filters-open' : ''}`}>
+              <div className="jobs-filter-search">
+                <HiOutlineSearch className="jobs-filter-icon" />
+                <input
+                  className="input"
+                  type="text"
+                  placeholder="Filter by title, company, or location…"
+                  value={filterText}
+                  onChange={(e) => setFilterText(e.target.value)}
+                />
+                {filterText && (
+                  <button className="jobs-filter-clear" onClick={() => setFilterText('')} aria-label="Clear filter">
+                    <HiOutlineX />
+                  </button>
+                )}
+              </div>
+              {/* On mobile, sort + remote collapse behind this toggle to reduce decisions. */}
+              <button
+                className={`jobs-filters-toggle ${filtersOpen ? 'active' : ''}`}
+                onClick={() => setFiltersOpen((v) => !v)}
+                aria-expanded={filtersOpen}
+              >
+                Filters
+              </button>
+              <div className="jobs-filter-advanced">
+                <button
+                  className={`jobs-remote-toggle ${remoteOnly ? 'active' : ''}`}
+                  onClick={() => setRemoteOnly((v) => !v)}
+                  aria-pressed={remoteOnly}
+                >
+                  Remote only
+                </button>
+                <label className="jobs-sort">
+                  <span>Sort</span>
+                  <select className="jobs-sort-select" value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                    <option value="relevance">Best match</option>
+                    <option value="newest">Newest</option>
+                    <option value="company">Company A–Z</option>
+                    <option value="title">Title A–Z</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+
             {/* Controls */}
             <div className="flex justify-between items-center mb-6">
               <div className="text-muted text-sm">
-                Showing {visibleJobs.length} of {jobs.length} roles found
+                Showing {visibleJobs.length} of {processedJobs.length} roles
+                {hasActiveFilters && <> · <button className="link-btn" onClick={clearFilters}>Clear filters</button></>}
               </div>
 
               <div className="view-toggle">
@@ -418,7 +497,13 @@ export default function Jobs() {
             </div>
 
             {/* Jobs List/Grid */}
-            {layout === 'grid' ? (
+            {processedJobs.length === 0 ? (
+              <div className="jobs-no-match">
+                <HiOutlineSearch size={28} />
+                <p>No roles match your filters.</p>
+                <button className="btn btn-sm btn-secondary" onClick={clearFilters}>Clear filters</button>
+              </div>
+            ) : layout === 'grid' ? (
               <div className="jobs-grid">
                 {visibleJobs.map((job) => (
                   <JobCard
@@ -447,7 +532,7 @@ export default function Jobs() {
             )}
 
             {/* Pagination / Show More */}
-            {visibleCount < jobs.length && (
+            {visibleCount < processedJobs.length && (
               <div className="mt-8 flex justify-center">
                 <button
                   className="btn btn-secondary glass ambient-glow px-8"

@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import Logo from '../components/Logo';
+import AuthLayout from '../components/AuthLayout';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -22,16 +22,15 @@ export default function Login() {
   };
 
   return (
-    <div className="auth-page">
+    <AuthLayout>
       <div className="auth-card glass">
-        <div className="auth-logo">
-          <Logo size={64} className="mb-4" />
-          <h1>Hirecraft</h1>
-          <p>AI-powered career acceleration</p>
+        <div className="auth-card-header">
+          <h1>Welcome back</h1>
+          <p>Sign in to continue tailoring your resume.</p>
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
-          {error && <div className="alert alert-error">{error}</div>}
+          {error && <div className="alert alert-error" role="alert">{error}</div>}
 
           <div className="input-group">
             <label htmlFor="login-email">Email</label>
@@ -66,10 +65,10 @@ export default function Login() {
           </button>
         </form>
 
-        <div className="auth-footer text-muted" style={{ fontSize: '0.8rem' }}>
+        <div className="auth-footer text-muted">
           Self-registration is disabled. Contact your admin for access.
         </div>
       </div>
-    </div>
+    </AuthLayout>
   );
 }

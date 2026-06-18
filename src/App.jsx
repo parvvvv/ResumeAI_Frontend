@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -7,11 +8,13 @@ import { SearchProvider } from './context/SearchContext';
 import { JobsProvider } from './context/JobsContext';
 import { ResumeProvider } from './context/ResumeContext';
 import Navbar from './components/Navbar';
+import Sidebar from './components/Sidebar';
 
 import ChatbotPanel from './components/chatbot';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
+import Resumes from './pages/Resumes';
 import Upload from './pages/Upload';
 import Editor from './pages/Editor';
 import Tailor from './pages/Tailor';
@@ -66,10 +69,12 @@ function AppRoutes() {
       };
 
   return (
-    <>
-      <Navbar />
-      {isAuthenticated && <ChatbotPanel />}
-      <div className="route-transition-viewport">
+    <div className={`app-shell ${isAuthenticated ? 'is-authed' : ''}`}>
+      {isAuthenticated && <Sidebar />}
+      <div className="app-main">
+        <Navbar />
+        {isAuthenticated && <ChatbotPanel />}
+        <div className="route-transition-viewport">
         <AnimatePresence mode="wait" initial={false} custom={navDirection}>
           <MotionDiv
             key={location.pathname}
@@ -83,6 +88,7 @@ function AppRoutes() {
 
               {/* Protected */}
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/resumes" element={<ProtectedRoute><Resumes /></ProtectedRoute>} />
               <Route path="/upload" element={<ProtectedRoute><Upload /></ProtectedRoute>} />
               <Route path="/editor/:resumeId" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
               <Route path="/tailor/:resumeId" element={<ProtectedRoute><Tailor /></ProtectedRoute>} />
@@ -98,14 +104,16 @@ function AppRoutes() {
             </Routes>
           </MotionDiv>
         </AnimatePresence>
+        </div>
       </div>
-    </>
+    </div>
   );
 }
 
 export default function App() {
   return (
     <BrowserRouter>
+      <ThemeProvider>
       <AuthProvider>
         <ToastProvider>
           <NotificationProvider>
@@ -119,6 +127,7 @@ export default function App() {
           </NotificationProvider>
         </ToastProvider>
       </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

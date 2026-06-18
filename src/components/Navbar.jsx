@@ -3,13 +3,13 @@ import { useAuth } from '../context/AuthContext';
 import { useJobs } from '../context/JobsContext';
 import { useResumes } from '../context/ResumeContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { HiOutlineUpload, HiOutlineViewGrid, HiOutlineLogout, HiOutlineSearch, HiOutlineBriefcase, HiX, HiOutlineTag, HiOutlineUser, HiOutlineOfficeBuilding, HiOutlineShieldCheck } from 'react-icons/hi';
+import { HiOutlineUpload, HiOutlineLogout, HiOutlineSearch, HiOutlineBriefcase, HiX, HiOutlineTag, HiOutlineUser, HiOutlineOfficeBuilding, HiOutlineDocumentText } from 'react-icons/hi';
 import { useSearch } from '../context/SearchContext';
 import Logo from './Logo';
-import { canAccessTemplatePlatform } from '../lib/templatePlatform';
+import ThemeToggle from './ThemeToggle';
 
 export default function Navbar() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
   const { searchQuery, setSearchQuery, isSearchOpen, setIsSearchOpen } = useSearch();
   const { status } = useJobs();
   const navigate = useNavigate();
@@ -31,7 +31,6 @@ export default function Navbar() {
   // Get resume data for recommendations
   const { baseResumes = [], generatedResumes: genResumes = [] } = useResumes();
   const generatedResumes = genResumes;
-  const canUseTemplates = canAccessTemplatePlatform(user);
 
   // Handle global shortcut (Cmd+K / Ctrl+K)
   useEffect(() => {
@@ -162,36 +161,27 @@ export default function Navbar() {
   };
   const statusColor = colors[status] || colors.idle;
 
-  const mobileNavItems = useMemo(() => {
-    const items = [
-      { path: '/dashboard', label: 'Home', icon: <HiOutlineViewGrid /> },
-      { path: '/upload', label: 'Upload resume', icon: <HiOutlineUpload />, className: 'mobile-nav-upload' },
-      {
-        path: '/jobs',
-        label: 'Recommended jobs',
-        icon: (
-          <>
-            <span
-              className={`status-dot nav-status-dot ${status === 'loading' || status === 'found' ? 'status-dot-pulse' : ''}`}
-              style={{ '--dot-color': statusColor, top: '4px', left: '10px' }}
-            />
-            <div className="nav-icon-wrapper">
-              <HiOutlineBriefcase />
-            </div>
-          </>
-        ),
-      },
-    ];
-
-    if (user?.role === 'admin') {
-      items.push({ path: '/admin', label: 'Admin', icon: <HiOutlineShieldCheck /> });
-    }
-    if (canUseTemplates) {
-      items.push({ path: '/templates', label: 'Templates', icon: <HiOutlineTag /> });
-    }
-
-    return items;
-  }, [canUseTemplates, status, statusColor, user?.role]);
+  // Mobile bottom nav is intentionally the core fast-path only (Resumes · Upload · Jobs).
+  // Home is reachable via the brand logo; Admin/Templates are desktop-only surfaces.
+  const mobileNavItems = useMemo(() => ([
+    { path: '/resumes', label: 'Resumes', icon: <HiOutlineDocumentText /> },
+    { path: '/upload', label: 'Upload resume', icon: <HiOutlineUpload />, className: 'mobile-nav-upload' },
+    {
+      path: '/jobs',
+      label: 'Recommended jobs',
+      icon: (
+        <>
+          <span
+            className={`status-dot nav-status-dot ${status === 'loading' || status === 'found' ? 'status-dot-pulse' : ''}`}
+            style={{ '--dot-color': statusColor, top: '4px', left: '10px' }}
+          />
+          <div className="nav-icon-wrapper">
+            <HiOutlineBriefcase />
+          </div>
+        </>
+      ),
+    },
+  ]), [status, statusColor]);
 
   const activeNavIndex = mobileNavItems.findIndex((item) => item.path === location.pathname);
 
@@ -320,7 +310,7 @@ export default function Navbar() {
       {/* Top Navbar */}
       <nav className={`navbar ${isSearchOpen ? 'navbar-search-elevated' : ''}`}>
         {!isSearchActive && (
-          <Link to="/dashboard" className="navbar-brand" style={{ textDecoration: 'none' }}>
+          <Link to="/dashboard" className="navbar-brand hide-on-desktop" style={{ textDecoration: 'none' }}>
             <Logo size={28} />
             Hirecraft
           </Link>
@@ -334,29 +324,15 @@ export default function Navbar() {
               ref={searchInputRef}
               type="text"
               className="input search-input"
-              placeholder="Search resumes..."
+              placeholder="Search resumes, jobs, templates…"
               value={searchQuery}
               onFocus={() => setIsSearchOpen(true)}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             {!searchQuery && !isSearchActive && !isSearchOpen && (
-              <div 
-                className="search-shortcut text-muted hide-on-mobile" 
-                style={{ 
-                  position: 'absolute', 
-                  right: '12px', 
-                  fontSize: '0.75rem', 
-                  pointerEvents: 'none', 
-                  background: 'var(--surface-container-high)', 
-                  padding: '2px 6px', 
-                  borderRadius: '4px', 
-                  border: '1px solid var(--outline-variant)',
-                  fontWeight: 600,
-                  letterSpacing: '0.5px'
-                }}
-              >
+              <kbd className="search-shortcut hide-on-mobile">
                 {isMac ? '⌘K' : 'Ctrl+K'}
-              </div>
+              </kbd>
             )}
             {(searchQuery || isSearchActive) && (
               <button 
@@ -441,7 +417,7 @@ export default function Navbar() {
           )}
         </div>
 
-        <div className={`navbar-actions ${isSearchActive ? 'hidden' : ''}`}>
+        <div className={`navbar-actions hide-on-desktop ${isSearchActive ? 'hidden' : ''}`}>
           <button className="btn btn-sm btn-icon btn-secondary mobile-search-trigger" onClick={() => {
             setIsSearchActive(true);
             setIsSearchOpen(true);
@@ -450,41 +426,15 @@ export default function Navbar() {
             <HiOutlineSearch />
           </button>
 
-          <Link to="/jobs" style={{ position: 'relative' }} className={`btn btn-sm btn-secondary hide-on-mobile nav-jobs-btn ${location.pathname === '/jobs' ? 'active' : ''}`}>
-            <span 
-              className={`status-dot nav-status-dot ${status === 'loading' || status === 'found' ? 'status-dot-pulse' : ''}`} 
-              style={{ '--dot-color': statusColor, top: '-4px', left: '-4px' }} 
-            />
-            <div className="nav-icon-wrapper">
-              <HiOutlineBriefcase />
-            </div>
-            <span>Jobs</span>
-          </Link>
-          <Link to="/upload" className={`btn btn-sm btn-secondary hide-on-mobile ${location.pathname === '/upload' ? 'active' : ''}`}>
-            <HiOutlineUpload /> <span>Upload</span>
-          </Link>
-          <Link to="/dashboard" className={`btn btn-sm btn-secondary hide-on-mobile ${location.pathname === '/dashboard' ? 'active' : ''}`}>
-            <HiOutlineViewGrid /> <span>Home</span>
-          </Link>
-          {canUseTemplates && (
-            <Link to="/templates" className={`btn btn-sm btn-secondary hide-on-mobile ${location.pathname.startsWith('/templates') ? 'active' : ''}`}>
-              <HiOutlineTag /> <span>Templates</span>
-            </Link>
-          )}
-          {user?.role === 'admin' && (
-            <Link to="/admin" className={`btn btn-sm btn-secondary hide-on-mobile ${location.pathname === '/admin' ? 'active' : ''}`}>
-              <HiOutlineShieldCheck /> <span>Admin</span>
-            </Link>
-          )}
+          <ThemeToggle />
           <div className="navbar-user">
-            <span className="hide-on-mobile">{user?.email?.split('@')[0]}</span>
             <button
               className="btn btn-icon btn-secondary"
               onClick={() => { logout(); navigate('/login'); }}
               title="Logout"
               aria-label="Logout"
             >
-              <HiOutlineLogout /> <span className="hide-on-mobile">Logout</span>
+              <HiOutlineLogout />
             </button>
           </div>
         </div>
