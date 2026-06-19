@@ -4390,7 +4390,7 @@ textarea.input {
 /* ── Dashboard two-column overview ── */
 .dash-columns {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
+  grid-template-columns: 0.8fr 1.2fr;
   gap: var(--space-8);
   align-items: start;
 }
@@ -4446,6 +4446,41 @@ textarea.input {
   text-align: left;
   cursor: pointer;
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+/* ── Compact variant for "Jump back in" ── */
+.recent-resume-row.compact {
+  padding: var(--space-2) var(--space-3);
+  gap: var(--space-2);
+  border-radius: var(--radius-md);
+}
+
+.recent-resume-row.compact .recent-resume-icon {
+  width: 28px;
+  height: 28px;
+  font-size: 0.85rem;
+  border-radius: var(--radius-sm);
+}
+
+.recent-resume-row.compact .recent-resume-title {
+  font-size: 0.82rem;
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-resume-row.compact .recent-resume-sub {
+  font-size: 0.72rem;
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recent-resume-row.compact .recent-resume-score {
+  font-size: 0.72rem;
+  padding: 2px 7px;
 }
 
 .recent-resume-row:hover {
@@ -4507,6 +4542,71 @@ textarea.input {
   opacity: 0;
   transform: translateX(-4px);
   transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+/* ── Jump back in — empty state ── */
+.jump-empty-state {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6);
+  border-radius: var(--radius-xl);
+  border: 1px dashed rgb(var(--border-rgb) / 0.2);
+  background: rgb(var(--glass-rgb) / 0.25);
+}
+
+.jump-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--radius-lg);
+  font-size: 1.25rem;
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+}
+
+.jump-empty-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.jump-empty-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--on-surface);
+}
+
+.jump-empty-desc {
+  font-size: 0.8rem;
+  color: var(--on-surface-variant);
+}
+
+/* ── Activity card container ── */
+.activity-card {
+  background: var(--surface-container-high);
+  border: 1px solid rgb(var(--border-rgb) / 0.1);
+  border-radius: var(--radius-xl);
+  padding: var(--space-2);
+  box-shadow: var(--elev-1);
+}
+
+.activity-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8);
+  border-radius: var(--radius-xl);
+  border: 1px dashed rgb(var(--border-rgb) / 0.2);
+  background: rgb(var(--glass-rgb) / 0.25);
+}
+
+.activity-empty-text {
+  font-size: 0.85rem;
+  color: var(--on-surface-variant);
+  font-weight: 500;
 }
 
 /* ── Tailoring-in-progress banner ── */

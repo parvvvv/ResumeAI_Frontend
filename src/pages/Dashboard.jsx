@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   HiOutlineUpload, HiOutlineSparkles, HiOutlineDocumentText,
   HiOutlineDownload, HiOutlineShieldCheck, HiOutlineDocumentAdd,
-  HiOutlineArrowRight,
+  HiOutlineArrowRight, HiOutlineCheckCircle,
 } from 'react-icons/hi';
 import { useAuth } from '../context/AuthContext';
 import { useResumes } from '../context/ResumeContext';
@@ -42,37 +42,44 @@ function timeAgo(input) {
 
 /* ─── Recent Activity ─── */
 function ActivityFeed({ items }) {
-  if (!items.length) return null;
   return (
     <section className="dash-activity">
       <h2 className="dash-section-title">Recent activity</h2>
-      <ul className="activity-list">
-        {items.map((item, i) => (
-          <li key={i}>
-            <button type="button" className="activity-item" onClick={item.onClick}>
-              <span className={`activity-icon activity-${item.type}`}>{item.icon}</span>
-              <span className="activity-main">
-                <span className="activity-label truncate">{item.label}</span>
-                <span className="activity-time">{timeAgo(item.at)}</span>
-              </span>
-              {item.pdfUrl && (
-                <span
-                  className="activity-action"
-                  role="button"
-                  tabIndex={0}
-                  title="Download PDF"
-                  aria-label="Download PDF"
-                  onClick={(e) => { e.stopPropagation(); window.open(item.pdfUrl, '_blank'); }}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); window.open(item.pdfUrl, '_blank'); } }}
-                >
-                  <HiOutlineDownload />
-                </span>
-              )}
-              <HiOutlineArrowRight className="activity-arrow" />
-            </button>
-          </li>
-        ))}
-      </ul>
+      {items.length > 0 ? (
+        <div className="activity-card">
+          <ul className="activity-list">
+            {items.map((item, i) => (
+              <li key={i}>
+                <button type="button" className="activity-item" onClick={item.onClick}>
+                  <span className={`activity-icon activity-${item.type}`}>{item.icon}</span>
+                  <span className="activity-main">
+                    <span className="activity-label truncate">{item.label}</span>
+                    <span className="activity-time">{timeAgo(item.at)}</span>
+                  </span>
+                  {item.pdfUrl && (
+                    <span
+                      className="activity-action"
+                      role="button"
+                      tabIndex={0}
+                      title="Download PDF"
+                      aria-label="Download PDF"
+                      onClick={(e) => { e.stopPropagation(); window.open(item.pdfUrl, '_blank'); }}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); window.open(item.pdfUrl, '_blank'); } }}
+                    >
+                      <HiOutlineDownload />
+                    </span>
+                  )}
+                  <HiOutlineArrowRight className="activity-arrow" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <div className="activity-empty">
+          <p className="activity-empty-text">No recent activity yet</p>
+        </div>
+      )}
     </section>
   );
 }
@@ -152,26 +159,19 @@ export default function Dashboard() {
       label: `Uploaded ${r.resumeData?.personalInfo?.fullName || 'resume'}`,
       onClick: () => navigate(`/editor/${r.id}`),
     })),
-  ].filter((x) => x.at).sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 5);
+  ].filter((x) => x.at).sort((a, b) => new Date(b.at) - new Date(a.at)).slice(0, 8);
 
-  // ── "Jump back in" preview (recent tailored, else recent originals) ──
-  const recentTailored = [...generated]
-    .filter((r) => r.createdAt)
+  // ── "Jump back in" — only pending / actionable resumes ──
+  const pendingGenerated = [...generated]
+    .filter((r) => r.createdAt && !r.pdfUrl)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 4);
-  const previewItems = recentTailored.length
-    ? recentTailored.map((r) => ({
-        id: r.id, kind: 'generated',
-        title: r.summary || 'Tailored Resume',
-        sub: `↳ ${baseName(r.baseResumeId)}`,
-        score: r.analytics?.atsScore || null,
-      }))
-    : baseResumes.slice(0, 4).map((r) => ({
-        id: r.id, kind: 'base',
-        title: r.resumeData?.personalInfo?.fullName || 'Untitled Resume',
-        sub: r.resumeData?.workExperience?.[0]?.role || 'Original resume',
-        score: null,
-      }));
+  const pendingItems = pendingGenerated.map((r) => ({
+    id: r.id, kind: 'generated',
+    title: r.summary || 'Tailored Resume',
+    sub: `↳ ${baseName(r.baseResumeId)}`,
+    score: r.analytics?.atsScore || null,
+  }));
 
   return (
     <PageShell className="dashboard-page">
@@ -230,36 +230,48 @@ export default function Dashboard() {
             <section className="dash-resumes">
               <div className="dash-section-head">
                 <h2 className="dash-section-title">Jump back in</h2>
-                <button className="link-btn" onClick={() => navigate('/resumes')}>
-                  View all <HiOutlineArrowRight />
-                </button>
-              </div>
-              <div className="recent-resume-list">
-                {previewItems.map((item) => (
-                  <button
-                    key={`${item.kind}-${item.id}`}
-                    className="recent-resume-row"
-                    onClick={() => navigate(item.kind === 'generated' ? `/preview/${item.id}?type=generated` : `/editor/${item.id}`)}
-                  >
-                    <span className={`recent-resume-icon ${item.kind}`}>
-                      {item.kind === 'generated' ? <HiOutlineSparkles /> : <HiOutlineDocumentText />}
-                    </span>
-                    <span className="recent-resume-main">
-                      <span className="recent-resume-title truncate">{item.title}</span>
-                      <span className="recent-resume-sub truncate">{item.sub}</span>
-                    </span>
-                    {item.score != null && (
-                      <span
-                        className="recent-resume-score"
-                        data-band={item.score >= 75 ? 'good' : item.score >= 50 ? 'mid' : 'low'}
-                      >
-                        {item.score}%
-                      </span>
-                    )}
-                    <HiOutlineArrowRight className="recent-resume-arrow" />
+                {pendingItems.length > 0 && (
+                  <button className="link-btn" onClick={() => navigate('/resumes')}>
+                    View all <HiOutlineArrowRight />
                   </button>
-                ))}
+                )}
               </div>
+              {pendingItems.length > 0 ? (
+                <div className="recent-resume-list">
+                  {pendingItems.map((item) => (
+                    <button
+                      key={`${item.kind}-${item.id}`}
+                      className="recent-resume-row compact"
+                      onClick={() => navigate(item.kind === 'generated' ? `/preview/${item.id}?type=generated` : `/editor/${item.id}`)}
+                    >
+                      <span className={`recent-resume-icon ${item.kind}`}>
+                        {item.kind === 'generated' ? <HiOutlineSparkles /> : <HiOutlineDocumentText />}
+                      </span>
+                      <span className="recent-resume-main">
+                        <span className="recent-resume-title truncate">{item.title}</span>
+                        <span className="recent-resume-sub truncate">{item.sub}</span>
+                      </span>
+                      {item.score != null && (
+                        <span
+                          className="recent-resume-score"
+                          data-band={item.score >= 75 ? 'good' : item.score >= 50 ? 'mid' : 'low'}
+                        >
+                          {item.score}%
+                        </span>
+                      )}
+                      <HiOutlineArrowRight className="recent-resume-arrow" />
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="jump-empty-state">
+                  <span className="jump-empty-icon"><HiOutlineCheckCircle /></span>
+                  <div className="jump-empty-copy">
+                    <p className="jump-empty-title">All caught up!</p>
+                    <p className="jump-empty-desc">No resumes pending for action</p>
+                  </div>
+                </div>
+              )}
             </section>
 
             <ActivityFeed items={activityItems} />
