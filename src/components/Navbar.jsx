@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useJobs } from '../context/JobsContext';
 import { useResumes } from '../context/ResumeContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { HiOutlineUpload, HiOutlineLogout, HiOutlineSearch, HiOutlineBriefcase, HiX, HiOutlineTag, HiOutlineUser, HiOutlineOfficeBuilding, HiOutlineDocumentText } from 'react-icons/hi';
+import { HiOutlineUpload, HiOutlineLogout, HiOutlineSearch, HiOutlineBriefcase, HiX, HiOutlineTag, HiOutlineUser, HiOutlineOfficeBuilding, HiOutlineDocumentText, HiOutlineAcademicCap } from 'react-icons/hi';
 import { useSearch } from '../context/SearchContext';
 import Logo from './Logo';
 import ThemeToggle from './ThemeToggle';
@@ -161,10 +161,10 @@ export default function Navbar() {
   };
   const statusColor = colors[status] || colors.idle;
 
-  // Mobile bottom nav is intentionally the core fast-path only (Resumes · Upload · Jobs).
-  // Home is reachable via the brand logo; Admin/Templates are desktop-only surfaces.
+  // Mobile bottom nav — core fast-path surfaces. Home via brand logo; Admin/Templates desktop-only.
   const mobileNavItems = useMemo(() => ([
     { path: '/resumes', label: 'Resumes', icon: <HiOutlineDocumentText /> },
+    { path: '/study-planner', label: 'Study Plan', icon: <HiOutlineAcademicCap /> },
     { path: '/upload', label: 'Upload resume', icon: <HiOutlineUpload />, className: 'mobile-nav-upload' },
     {
       path: '/jobs',
@@ -310,10 +310,10 @@ export default function Navbar() {
       {/* Top Navbar */}
       <nav className={`navbar ${isSearchOpen ? 'navbar-search-elevated' : ''}`}>
         {!isSearchActive && (
-          <Link to="/dashboard" className="navbar-brand hide-on-desktop" style={{ textDecoration: 'none' }}>
+          <span className="navbar-brand hide-on-desktop" style={{ textDecoration: 'none', cursor: 'default' }}>
             <Logo size={28} />
             Hirecraft
-          </Link>
+          </span>
         )}
 
         {/* Global Search Bar */}
@@ -417,6 +417,10 @@ export default function Navbar() {
           )}
         </div>
 
+        <div className="navbar-theme">
+          <ThemeToggle />
+        </div>
+
         <div className={`navbar-actions hide-on-desktop ${isSearchActive ? 'hidden' : ''}`}>
           <button className="btn btn-sm btn-icon btn-secondary mobile-search-trigger" onClick={() => {
             setIsSearchActive(true);
@@ -426,7 +430,6 @@ export default function Navbar() {
             <HiOutlineSearch />
           </button>
 
-          <ThemeToggle />
           <div className="navbar-user">
             <button
               className="btn btn-icon btn-secondary"

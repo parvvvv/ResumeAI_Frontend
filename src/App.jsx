@@ -7,6 +7,7 @@ import { NotificationProvider } from './context/NotificationContext';
 import { SearchProvider } from './context/SearchContext';
 import { JobsProvider } from './context/JobsContext';
 import { ResumeProvider } from './context/ResumeContext';
+import { StudyPlanProvider } from './context/StudyPlanContext';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 
@@ -24,6 +25,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import Templates from './pages/Templates';
 import TemplateEditor from './pages/TemplateEditor';
 import SharedTemplate from './pages/SharedTemplate';
+import StudyPlanner from './pages/StudyPlanner';
 import { canAccessTemplatePlatform } from './lib/templatePlatform';
 import './index.css';
 
@@ -94,6 +96,7 @@ function AppRoutes() {
               <Route path="/tailor/:resumeId" element={<ProtectedRoute><Tailor /></ProtectedRoute>} />
               <Route path="/preview/:resumeId" element={<ProtectedRoute><Preview /></ProtectedRoute>} />
               <Route path="/jobs" element={<ProtectedRoute><Jobs /></ProtectedRoute>} />
+              <Route path="/study-planner" element={<ProtectedRoute><StudyPlanner /></ProtectedRoute>} />
               <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
               <Route path="/templates" element={<TemplatePlatformRoute><Templates /></TemplatePlatformRoute>} />
               <Route path="/templates/share/:token" element={<ProtectedRoute><SharedTemplate /></ProtectedRoute>} />
@@ -120,7 +123,9 @@ export default function App() {
             <SearchProvider>
               <ResumeProvider>
                 <JobsProvider>
-                  <AppRoutes />
+                  <StudyPlanProvider>
+                    <AppRoutes />
+                  </StudyPlanProvider>
                 </JobsProvider>
               </ResumeProvider>
             </SearchProvider>

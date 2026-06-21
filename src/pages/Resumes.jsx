@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   HiOutlineUpload, HiOutlinePencilAlt, HiOutlineSparkles,
   HiOutlineDocumentText, HiOutlineDownload, HiOutlineEye,
-  HiOutlineDocumentAdd, HiOutlineTrash,
+  HiOutlineDocumentAdd, HiOutlineTrash, HiOutlineAcademicCap,
 } from 'react-icons/hi';
 import { useToast } from '../context/ToastContext';
 import { useResumes } from '../context/ResumeContext';
@@ -287,6 +287,7 @@ export default function Resumes() {
                         </div>
                         <OverflowMenu items={[
                           { icon: <HiOutlineEye />, label: 'Preview', onClick: () => navigate(`/preview/${r.id}?type=generated`) },
+                          { icon: <HiOutlineAcademicCap />, label: 'Study Plan', onClick: () => navigate(`/study-planner?resumeId=${r.id}`) },
                           ...(r.pdfUrl ? [{ icon: <HiOutlineDownload />, label: 'Download', onClick: () => window.open(r.pdfUrl, '_blank') }] : []),
                           { icon: <HiOutlineTrash />, label: deleting === r.id ? 'Deleting…' : 'Delete', onClick: () => handleDeleteGenerated(r.id), danger: true, disabled: deleting === r.id },
                         ]} />

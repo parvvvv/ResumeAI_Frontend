@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { useResumes } from '../context/ResumeContext';
 import { useNotificationEvents } from '../context/NotificationContext';
 import { EmptyState, PageShell } from '../components/ui';
+import StudyDashboardWidget from '../components/study-planner/StudyDashboardWidget';
 
 /* ─── Stat Card ─── */
 function StatCard({ icon, label, value, accent = 'primary', trend }) {
@@ -226,7 +227,9 @@ export default function Dashboard() {
             {statCards.map((s) => <StatCard key={s.label} {...s} />)}
           </div>
 
-          <div className="dash-columns">
+          <StudyDashboardWidget />
+
+          <div className="dash-columns mt-8">
             <section className="dash-resumes">
               <div className="dash-section-head">
                 <h2 className="dash-section-title">Jump back in</h2>
