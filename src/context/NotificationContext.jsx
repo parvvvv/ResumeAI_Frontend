@@ -41,7 +41,7 @@ export function NotificationProvider({ children }) {
   }, []);
 
   // --- Streaming tailor progress ---
-  const startTailorStream = useCallback((baseResumeId, jobDescription) => {
+  const startTailorStream = useCallback((baseResumeId, jobDescription, rewriteIntensity) => {
     const token = localStorage.getItem('token');
     if (!token) return;
 
@@ -60,7 +60,7 @@ export function NotificationProvider({ children }) {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
           },
-          body: JSON.stringify({ baseResumeId, jobDescription }),
+          body: JSON.stringify({ baseResumeId, jobDescription, rewriteIntensity }),
         });
 
         if (!response.ok) {
