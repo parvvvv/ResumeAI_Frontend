@@ -27,6 +27,8 @@ export default function StudyPlanner() {
   const [activeTab, setActiveTab] = useState('active');
   const [activeWeek, setActiveWeek] = useState(1);
   const [fetchError, setFetchError] = useState(null);
+  const [confirmAction, setConfirmAction] = useState(null); // { type: 'archive' | 'regenerate', label: string }
+  const [isRegenerating, setIsRegenerating] = useState(false);
   const location = useLocation();
 
   useEffect(() => {
@@ -50,11 +52,33 @@ export default function StudyPlanner() {
     }
   };
 
+  const handleArchive = () => {
+    setConfirmAction({ type: 'archive', label: 'Archive this plan? You can restore it later.' });
+  };
+
+  const handleRegenerate = () => {
+    setConfirmAction({ type: 'regenerate', label: `Regenerate Week ${activeWeek}? This will reset all progress for this week.` });
+  };
+
+  const executeConfirmedAction = async () => {
+    if (!confirmAction) return;
+    if (confirmAction.type === 'archive') {
+      await archivePlan(activePlan.id);
+      setViewMode('list');
+    } else if (confirmAction.type === 'regenerate') {
+      setIsRegenerating(true);
+      try {
+        await regenerateWeek(activePlan.id, activeWeek);
+      } finally {
+        setIsRegenerating(false);
+      }
+    }
+    setConfirmAction(null);
+  };
+
+  // Resolve current week data — always use array index since backend now sets correct weekNumber
   const weeklyPlan = activePlan?.plan?.weeklyPlan;
-  const hasUniqueWeekNumbers = weeklyPlan && new Set(weeklyPlan.map(w => w.weekNumber)).size === weeklyPlan.length;
-  const currentWeekData = hasUniqueWeekNumbers
-    ? weeklyPlan?.find(w => w.weekNumber === activeWeek)
-    : weeklyPlan?.[activeWeek - 1];
+  const currentWeekData = weeklyPlan?.[activeWeek - 1];
 
   let completedTaskCount = 0;
   let totalTaskCount = 0;
@@ -182,10 +206,7 @@ export default function StudyPlanner() {
               </div>
             </div>
             <div className="plan-hero-actions">
-              <button className="btn btn-outline text-error" onClick={() => {
-                archivePlan(activePlan.id);
-                setViewMode('list');
-              }}>
+              <button className="btn btn-outline text-error" onClick={handleArchive}>
                 Archive Plan
               </button>
             </div>
@@ -234,9 +255,10 @@ export default function StudyPlanner() {
                     </button>
                     <button
                       className="week-nav-btn week-nav-regen"
-                      onClick={() => regenerateWeek(activePlan.id, activeWeek)}
+                      disabled={isRegenerating}
+                      onClick={handleRegenerate}
                     >
-                      Regenerate Week
+                      {isRegenerating ? 'Regenerating...' : 'Regenerate Week'}
                     </button>
                     <button
                       className="week-nav-btn"
@@ -249,6 +271,24 @@ export default function StudyPlanner() {
                 </motion.div>
               )}
             </AnimatePresence>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {confirmAction && (
+        <div className="modal-overlay" onClick={() => setConfirmAction(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <p style={{ marginBottom: 'var(--space-6)', fontSize: '0.95rem' }}>{confirmAction.label}</p>
+            <div className="flex justify-end gap-3">
+              <button className="btn btn-outline" onClick={() => setConfirmAction(null)}>Cancel</button>
+              <button
+                className={`btn ${confirmAction.type === 'archive' ? 'btn-outline text-error' : 'btn-primary'}`}
+                onClick={executeConfirmedAction}
+              >
+                {confirmAction.type === 'archive' ? 'Archive' : 'Regenerate'}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -69,8 +69,9 @@ export function StudyPlanProvider({ children }) {
   const generatePlan = async (config) => {
     setIsGenerating(true);
     setGenerationMessage('Starting generation...');
+    let lastPlanId = null;
+
     try {
-      // For SSE with our api client we might need native fetch
       const token = localStorage.getItem('token');
       const response = await fetch('/api/study-plan/generate', {
         method: 'POST',
@@ -82,45 +83,53 @@ export function StudyPlanProvider({ children }) {
       });
 
       if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.detail || 'Failed to generate plan');
+        let detail = 'Failed to generate plan';
+        try {
+          const err = await response.json();
+          detail = err.detail || detail;
+        } catch { /* non-JSON error body */ }
+        throw new Error(detail);
       }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
-
-      let lastPlanId = null;
+      let weeksGenerated = 0;
 
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
-        
+
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n\n');
-        
         buffer = lines.pop() || '';
-        
+
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              
-              if (data.type === 'progress') {
-                setGenerationMessage(data.message);
-              } else if (data.type === 'error') {
-                throw new Error(data.message);
-              } else if (data.type === 'complete') {
-                lastPlanId = data.planId;
-              }
-            } catch {
-              console.warn("Failed to parse SSE chunk", line);
-            }
+          if (!line.startsWith('data: ')) continue;
+
+          let data;
+          try {
+            data = JSON.parse(line.slice(6));
+          } catch {
+            continue; // Malformed SSE chunk — skip
+          }
+
+          if (data.type === 'progress') {
+            setGenerationMessage(data.message);
+          } else if (data.type === 'gap_analysis') {
+            setGenerationMessage('Career gaps analyzed — generating weekly plans...');
+          } else if (data.type === 'week_generated') {
+            weeksGenerated++;
+            setGenerationMessage(`Week ${weeksGenerated} of ${config.totalWeeks} generated...`);
+          } else if (data.type === 'complete') {
+            lastPlanId = data.planId;
+            setGenerationMessage('Plan saved! Loading...');
+          } else if (data.type === 'error') {
+            console.warn('SSE error event:', data.message);
           }
         }
       }
 
-      // Fallback: if stream ended without complete event, just refresh plans
       if (lastPlanId) {
         await fetchPlans();
         await fetchPlan(lastPlanId);

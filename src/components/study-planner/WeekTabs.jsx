@@ -1,12 +1,6 @@
 export default function WeekTabs({ weeks, activeWeek, onSelect, progress }) {
   if (!weeks || weeks.length === 0) return null;
 
-  // If weekNumbers aren't unique (old plans with LLM bug), use array index
-  const hasUniqueNumbers = new Set(weeks.map(w => w.weekNumber)).size === weeks.length;
-
-  const getDisplayNum = (w, i) => (hasUniqueNumbers ? w.weekNumber : i + 1);
-  const isActive = (w, i) => activeWeek === getDisplayNum(w, i);
-
   const calcWeekProgress = (week) => {
     let total = 0, done = 0;
     week.days.forEach(day => {
@@ -21,8 +15,9 @@ export default function WeekTabs({ weeks, activeWeek, onSelect, progress }) {
   return (
     <div className="week-tabs-row">
       {weeks.map((week, idx) => {
-        const displayNum = getDisplayNum(week, idx);
-        const active = isActive(week, idx);
+        // Use 1-based index as the canonical week number (matches backend array position)
+        const displayNum = idx + 1;
+        const active = activeWeek === displayNum;
         const wp = calcWeekProgress(week);
         const weekTitle = week.portfolioProject?.weekMilestone || week.theme || '';
         
